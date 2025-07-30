@@ -41,14 +41,6 @@
       transition: all 0.3s;
     }
     .paste-area:hover { background: #e9ecef; border-color: #007bff; }
-    .paste-area.dragover { background: #e3f2fd; border-color: #2196f3; }
-    input[type="file"] {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      margin-top: 10px;
-    }
     img, canvas {
       max-width: 100%;
       max-height: 400px;
@@ -187,11 +179,11 @@
   <div class="container">
     <h2>🔢 Extrator de Números PRO</h2>
     
+    <!-- Seção de input simplificada -->
     <div class="input-section">
-      <h3>📁 Carregar (múltiplos) ou 📋 Colar imagem</h3>
-      <input type="file" accept="image/*" id="imageInput" multiple>
+      <h3>📋 Colar Imagem</h3>
       <div class="paste-area" id="pasteArea">
-        <p>📋 <strong>Clique e cole (Ctrl+V)</strong> ou <strong>arraste ficheiros aqui</strong></p>
+        <p><strong>Clique aqui e cole uma imagem (Ctrl+V)</strong></p>
       </div>
     </div>
     
@@ -229,7 +221,7 @@
   </div>
 
   <script>
-    const imageInput = document.getElementById('imageInput');
+    // A constante 'imageInput' foi removida
     const output = document.getElementById('output');
     const preview = document.getElementById('preview');
     const pasteArea = document.getElementById('pasteArea');
@@ -293,7 +285,7 @@
         isProcessing = true;
         
         const file = processingQueue.shift();
-        showStatus(`A processar ${processingQueue.length + 1} ficheiro(s)...`, 'processing');
+        showStatus(`A processar imagem...`, 'processing');
         
         const imageURL = URL.createObjectURL(file);
         const preprocessedImage = await preprocessImage(imageURL);
@@ -353,7 +345,7 @@
     function handleFiles(files) {
         const imageFiles = [...files].filter(file => file.type.startsWith('image/'));
         if (imageFiles.length === 0) {
-            showStatus('❌ Por favor, selecione ficheiros de imagem válidos', 'error');
+            showStatus('❌ Por favor, cole um ficheiro de imagem válido', 'error');
             return;
         }
         processingQueue.push(...imageFiles);
@@ -364,7 +356,7 @@
         }
     }
 
-    imageInput.addEventListener('change', (e) => handleFiles(e.target.files));
+    // Event listener de 'change' foi removido
     
     document.addEventListener('paste', async (e) => {
         const items = e.clipboardData?.items;
@@ -377,13 +369,7 @@
         }
     });
 
-    pasteArea.addEventListener('dragover', (e) => { e.preventDefault(); pasteArea.classList.add('dragover'); });
-    pasteArea.addEventListener('dragleave', () => pasteArea.classList.remove('dragover'));
-    pasteArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        pasteArea.classList.remove('dragover');
-        handleFiles(e.dataTransfer.files);
-    });
+    // Event listeners de 'drag' e 'drop' foram removidos
     
     function removeSpecialChars() {
         const currentText = output.value;
@@ -424,10 +410,8 @@
         }
     }
 
-    // --- FUNÇÕES DE PESQUISA CORRIGIDAS ---
     async function searchCnpj(event) {
         event.preventDefault();
-        // Junta todo o texto, remove não-dígitos, e procura pelo primeiro bloco de 14 dígitos
         const allDigits = output.value.replace(/\D/g, '');
         const cnpjMatch = allDigits.match(/\d{14}/);
         
@@ -447,7 +431,6 @@
 
     async function searchNfe(event) {
         event.preventDefault();
-        // Junta todo o texto, remove não-dígitos, e procura pelo primeiro bloco de 44 dígitos
         const allDigits = output.value.replace(/\D/g, '');
         const nfeMatch = allDigits.match(/\d{44}/);
 
@@ -469,7 +452,7 @@
     function clearAll() {
         output.value = '';
         preview.style.display = 'none';
-        imageInput.value = '';
+        // A linha 'imageInput.value = ""' foi removida
         hideStatus();
         updateProgress(0);
         copyBtn.disabled = true;
