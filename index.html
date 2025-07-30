@@ -4,7 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Extrator de Números PRO</title>
+  <!-- Bibliotecas de reconhecimento -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
+
   <style>
     body { 
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -179,7 +182,6 @@
   <div class="container">
     <h2>🔢 Extrator de Números PRO</h2>
     
-    <!-- Seção de input simplificada -->
     <div class="input-section">
       <h3>📋 Colar Imagem</h3>
       <div class="paste-area" id="pasteArea">
@@ -197,7 +199,8 @@
     <div id="charCounter" class="char-counter">Dígitos: 0 | Linhas: 0</div>
     
     <div class="buttons">
-      <button onclick="removeSpecialChars()" id="removeCharsBtn" class="secondary" disabled>#️⃣ Apenas Dígitos</button>
+      <!-- Botões de limpeza unificados -->
+      <button onclick="cleanAndJoin()" id="cleanJoinBtn" class="secondary" disabled>🧹 Limpar e Unir</button>
       <button onclick="handleCopyButtonClick()" id="copyBtn" disabled>📋 Copiar</button>
       <button onclick="clearAll()" id="clearBtn">🗑️ Limpar</button>
     </div>
@@ -221,7 +224,6 @@
   </div>
 
   <script>
-    // A constante 'imageInput' foi removida
     const output = document.getElementById('output');
     const preview = document.getElementById('preview');
     const pasteArea = document.getElementById('pasteArea');
@@ -229,7 +231,7 @@
     const progressFill = document.getElementById('progressFill');
     const status = document.getElementById('status');
     const copyBtn = document.getElementById('copyBtn');
-    const removeCharsBtn = document.getElementById('removeCharsBtn');
+    const cleanJoinBtn = document.getElementById('cleanJoinBtn'); // Novo botão unificado
     const historyContainer = document.getElementById('historyContainer');
     const charCounter = document.getElementById('charCounter');
     const signature = document.getElementById('signature');
@@ -290,13 +292,34 @@
         const imageURL = URL.createObjectURL(file);
         const preprocessedImage = await preprocessImage(imageURL);
 
+        let barcodeFound = false;
+        let ocrFound = false;
+
         try {
+            // --- ETAPA 1: LER CÓDIGO DE BARRAS ---
+            showStatus('🔍 A procurar código de barras...', 'processing');
+            updateProgress(25);
+            try {
+                const codeReader = new ZXing.BrowserMultiFormatReader();
+                const result = await codeReader.decodeFromImageUrl(preprocessedImage);
+                if (result && result.getText()) {
+                    const barcodeText = result.getText();
+                    const currentOutput = output.value;
+                    output.value = (currentOutput ? currentOutput + '\n' : '') + barcodeText;
+                    barcodeFound = true;
+                }
+            } catch (err) {
+                console.log("Nenhum código de barras encontrado, a prosseguir com OCR.", err);
+            }
+
+            // --- ETAPA 2: LER TEXTO (OCR) ---
+            showStatus('🔍 A reconhecer texto (OCR)...', 'processing');
+            updateProgress(50);
             const worker = await Tesseract.createWorker({
                 logger: m => {
                     if (m.status === 'recognizing text') {
-                        const progress = Math.round(m.progress * 100);
+                        const progress = 50 + Math.round(m.progress * 50);
                         updateProgress(progress);
-                        showStatus(`🔍 A reconhecer... ${progress}%`, 'processing');
                     }
                 }
             });
@@ -317,16 +340,24 @@
                 const numerosLimpos = [...new Set(numeros)].map(n => n.trim()).filter(Boolean);
                 const currentOutput = output.value;
                 output.value = (currentOutput ? currentOutput + '\n' : '') + numerosLimpos.join('\n');
-                updateCharCounter();
-                showStatus(`✅ ${numerosLimpos.length} números adicionados!`, 'success');
+                ocrFound = true;
+            }
+            
+            // --- ETAPA 3: FINALIZAR E MOSTRAR RESULTADO ---
+            updateCharCounter();
+            if(barcodeFound || ocrFound) {
+                let successMessage = "✅ ";
+                if(barcodeFound) successMessage += "Código de barras encontrado! ";
+                if(ocrFound) successMessage += "Números extraídos!";
+                showStatus(successMessage, 'success');
                 copyBtn.disabled = false;
-                removeCharsBtn.disabled = false;
+                cleanJoinBtn.disabled = false; // Ativa o botão unificado
             } else {
-                 showStatus('⚠️ Nenhum número encontrado neste ficheiro.', 'error');
+                 showStatus('⚠️ Nenhum dado reconhecido na imagem.', 'error');
             }
 
         } catch (error) {
-            console.error('Erro no OCR:', error);
+            console.error('Erro no processamento:', error);
             showStatus('❌ Erro ao processar imagem.', 'error');
         } finally {
             URL.revokeObjectURL(imageURL);
@@ -337,7 +368,6 @@
             } else {
                 saveToHistory(output.value);
                 loadHistory();
-                showStatus('🏁 Processamento concluído!', 'success');
             }
         }
     }
@@ -355,8 +385,6 @@
             processQueue();
         }
     }
-
-    // Event listener de 'change' foi removido
     
     document.addEventListener('paste', async (e) => {
         const items = e.clipboardData?.items;
@@ -369,12 +397,12 @@
         }
     });
 
-    // Event listeners de 'drag' e 'drop' foram removidos
-    
-    function removeSpecialChars() {
+    // --- NOVA FUNÇÃO UNIFICADA ---
+    function cleanAndJoin() {
         const currentText = output.value;
         if (!currentText.trim()) return;
-        const cleanedText = currentText.replace(/[^0-9\n]/g, ''); 
+        // Remove tudo que não for dígito e junta tudo em uma linha
+        const cleanedText = currentText.replace(/\D/g, '');
         output.value = cleanedText;
         updateCharCounter();
     }
@@ -452,11 +480,10 @@
     function clearAll() {
         output.value = '';
         preview.style.display = 'none';
-        // A linha 'imageInput.value = ""' foi removida
         hideStatus();
         updateProgress(0);
         copyBtn.disabled = true;
-        removeCharsBtn.disabled = true;
+        cleanJoinBtn.disabled = true; // Desativa o botão unificado
         updateCharCounter();
     }
 
@@ -482,7 +509,7 @@
             div.onclick = () => {
                 output.value = item.content;
                 copyBtn.disabled = false;
-                removeCharsBtn.disabled = false;
+                cleanJoinBtn.disabled = false; // Ativa o botão unificado
                 updateCharCounter();
             };
             historyContainer.appendChild(div);
