@@ -199,7 +199,6 @@
     <div id="charCounter" class="char-counter">Dígitos: 0 | Linhas: 0</div>
     
     <div class="buttons">
-      <!-- Botões de limpeza unificados -->
       <button onclick="cleanAndJoin()" id="cleanJoinBtn" class="secondary" disabled>🧹 Limpar e Unir</button>
       <button onclick="handleCopyButtonClick()" id="copyBtn" disabled>📋 Copiar</button>
       <button onclick="clearAll()" id="clearBtn">🗑️ Limpar</button>
@@ -231,7 +230,7 @@
     const progressFill = document.getElementById('progressFill');
     const status = document.getElementById('status');
     const copyBtn = document.getElementById('copyBtn');
-    const cleanJoinBtn = document.getElementById('cleanJoinBtn'); // Novo botão unificado
+    const cleanJoinBtn = document.getElementById('cleanJoinBtn');
     const historyContainer = document.getElementById('historyContainer');
     const charCounter = document.getElementById('charCounter');
     const signature = document.getElementById('signature');
@@ -296,7 +295,6 @@
         let ocrFound = false;
 
         try {
-            // --- ETAPA 1: LER CÓDIGO DE BARRAS ---
             showStatus('🔍 A procurar código de barras...', 'processing');
             updateProgress(25);
             try {
@@ -312,7 +310,6 @@
                 console.log("Nenhum código de barras encontrado, a prosseguir com OCR.", err);
             }
 
-            // --- ETAPA 2: LER TEXTO (OCR) ---
             showStatus('🔍 A reconhecer texto (OCR)...', 'processing');
             updateProgress(50);
             const worker = await Tesseract.createWorker({
@@ -343,7 +340,6 @@
                 ocrFound = true;
             }
             
-            // --- ETAPA 3: FINALIZAR E MOSTRAR RESULTADO ---
             updateCharCounter();
             if(barcodeFound || ocrFound) {
                 let successMessage = "✅ ";
@@ -351,7 +347,7 @@
                 if(ocrFound) successMessage += "Números extraídos!";
                 showStatus(successMessage, 'success');
                 copyBtn.disabled = false;
-                cleanJoinBtn.disabled = false; // Ativa o botão unificado
+                cleanJoinBtn.disabled = false;
             } else {
                  showStatus('⚠️ Nenhum dado reconhecido na imagem.', 'error');
             }
@@ -397,11 +393,9 @@
         }
     });
 
-    // --- NOVA FUNÇÃO UNIFICADA ---
     function cleanAndJoin() {
         const currentText = output.value;
         if (!currentText.trim()) return;
-        // Remove tudo que não for dígito e junta tudo em uma linha
         const cleanedText = currentText.replace(/\D/g, '');
         output.value = cleanedText;
         updateCharCounter();
@@ -438,6 +432,7 @@
         }
     }
 
+    // --- FUNÇÕES DE PESQUISA CORRIGIDAS ---
     async function searchCnpj(event) {
         event.preventDefault();
         const allDigits = output.value.replace(/\D/g, '');
@@ -445,12 +440,13 @@
         
         if (cnpjMatch) {
             const cnpj = cnpjMatch[0];
+            // Abre a janela primeiro para evitar o bloqueador de pop-up
+            const newWindow = window.open(event.target.href, '_blank');
             try {
                 await copyToClipboard(cnpj);
-                showStatus(`CNPJ ${cnpj} copiado! Cole no site que será aberto.`, 'success');
-                window.open(event.target.href, '_blank');
+                showStatus(`CNPJ ${cnpj} copiado! Cole no site que abriu.`, 'success');
             } catch (error) {
-                showStatus('❌ Falha ao copiar o CNPJ.', 'error');
+                showStatus('❌ Falha ao copiar o CNPJ. Cole manualmente.', 'error');
             }
         } else {
             showStatus('Nenhum CNPJ de 14 dígitos foi encontrado no texto.', 'error');
@@ -464,12 +460,13 @@
 
         if (nfeMatch) {
             const nfe = nfeMatch[0];
+            // Abre a janela primeiro para evitar o bloqueador de pop-up
+            const newWindow = window.open(event.target.href, '_blank');
             try {
                 await copyToClipboard(nfe);
-                showStatus(`Chave da NFe copiada! Cole no site que será aberto.`, 'success');
-                window.open(event.target.href, '_blank');
+                showStatus(`Chave da NFe copiada! Cole no site que abriu.`, 'success');
             } catch (error) {
-                showStatus('❌ Falha ao copiar a chave da NFe.', 'error');
+                showStatus('❌ Falha ao copiar a chave da NFe. Cole manualmente.', 'error');
             }
         } else {
             showStatus('Nenhuma chave de NFe de 44 dígitos foi encontrada no texto.', 'error');
@@ -483,7 +480,7 @@
         hideStatus();
         updateProgress(0);
         copyBtn.disabled = true;
-        cleanJoinBtn.disabled = true; // Desativa o botão unificado
+        cleanJoinBtn.disabled = true;
         updateCharCounter();
     }
 
@@ -509,7 +506,7 @@
             div.onclick = () => {
                 output.value = item.content;
                 copyBtn.disabled = false;
-                cleanJoinBtn.disabled = false; // Ativa o botão unificado
+                cleanJoinBtn.disabled = false;
                 updateCharCounter();
             };
             historyContainer.appendChild(div);
