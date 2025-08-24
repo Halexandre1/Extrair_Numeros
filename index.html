@@ -1,530 +1,443 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Extrator de Números PRO</title>
-  <!-- Bibliotecas de reconhecimento -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
-
   <style>
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      padding: 20px; 
-      max-width: 800px; 
-      margin: 0 auto;
-      background: #f7f7f7;
-      color: #333;
-    }
-    .container {
-      background: white;
-      padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h2, h3 { text-align: center; margin-bottom: 20px; }
-    .input-section {
-      margin-bottom: 30px;
-      padding: 20px;
-      border: 2px dashed #ddd;
-      border-radius: 8px;
-      text-align: center;
-      transition: border-color 0.3s;
-    }
-    .input-section:hover { border-color: #007bff; }
-    .paste-area {
-      background: #f8f9fa;
-      border: 2px dashed #dee2e6;
-      border-radius: 8px;
-      padding: 40px 20px;
-      margin: 20px 0;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .paste-area:hover { background: #e9ecef; border-color: #007bff; }
-    img, canvas {
-      max-width: 100%;
-      max-height: 400px;
-      margin: 20px 0;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      display: block;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .progress-bar {
-      width: 100%;
-      height: 20px;
-      background: #e9ecef;
-      border-radius: 10px;
-      overflow: hidden;
-      margin: 10px 0;
-      display: none;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #007bff, #0056b3);
-      width: 0%;
-      transition: width 0.3s;
-      border-radius: 10px;
-    }
-    textarea {
-      width: 100%;
-      min-height: 150px;
-      padding: 15px;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      resize: vertical;
-      box-sizing: border-box;
-    }
-    .char-counter {
-        text-align: right;
-        font-size: 12px;
-        color: #666;
-        margin-top: 5px;
-        padding-right: 5px;
-        font-weight: bold;
-    }
-    .char-counter.valid {
-        color: #28a745;
-    }
-    .status {
-      padding: 10px;
-      border-radius: 5px;
-      margin: 10px 0;
-      text-align: center;
-      font-weight: bold;
-    }
-    .status.processing { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
-    .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-    .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-    .buttons {
-      margin-top: 15px;
-      text-align: center;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-    }
-    button {
-      background: #007bff;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
-      transition: background 0.3s;
-    }
-    button.secondary {
-        background-color: #6c757d;
-    }
-    button.secondary:hover {
-        background-color: #5a6268;
-    }
-    button:hover { background: #0056b3; }
-    button:disabled { background: #cccccc; color: #666; cursor: not-allowed; }
-    
-    .useful-links {
-        margin-top: 30px;
-        padding-top: 20px;
-        border-top: 1px solid #eee;
-        text-align: center;
-    }
-    .link-button {
-      display: inline-block;
-      background: #28a745;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 5px;
-      text-decoration: none;
-      margin: 5px;
-      font-size: 14px;
-      transition: background-color 0.3s;
-    }
-    .link-button:hover {
-        background: #218838;
-    }
-
-    .history { margin-top: 30px; }
-    .history-item {
-      background: #f1f1f1;
-      padding: 10px;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    .history-item:hover { background: #e0e0e0; }
-    .history-item .date { font-weight: bold; color: #555; }
-    .history-item .content {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      font-family: 'Courier New', monospace;
-    }
-    footer {
-      text-align: center;
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #eee;
-      font-size: 14px;
-      color: #777;
-    }
+    .progress-fill { transition: width 0.3s ease-in-out; }
   </style>
 </head>
-<body>
-  <div class="container">
-    <h2>🔢 Extrator de Números PRO</h2>
-    
-    <div class="input-section">
-      <h3>📋 Colar Imagem</h3>
-      <div class="paste-area" id="pasteArea">
-        <p><strong>Clique aqui e cole uma imagem (Ctrl+V)</strong></p>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center min-h-screen p-4">
+
+  <div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
+    <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
+
+    <header class="text-center mb-6 flex items-center justify-center gap-4">
+        <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logótipo" class="w-12 h-12 rounded-full object-cover">
+        <div>
+            <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">🔢 Extrator de Números PRO</h2>
+            <p class="text-slate-500 dark:text-slate-400 mt-1">Cole ou selecione uma imagem para extrair números.</p>
+        </div>
+    </header>
+
+    <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all">
+      <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3"></i>
+      <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste uma imagem</p>
+      <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
+      <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
+        <i class="fas fa-upload mr-2"></i> Selecionar Ficheiro
+      </label>
+      <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+    </div>
+
+    <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
+    <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
+      <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width: 0%"></div>
+    </div>
+
+    <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md hidden"></canvas>
+
+    <div class="mt-6">
+      <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
+      <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="Os números extraídos aparecerão aqui..."></textarea>
+      <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
+    </div>
+
+    <div class="flex flex-wrap justify-center gap-3 mt-4">
+      <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed" disabled><i class="fas fa-broom mr-2"></i>Limpar e Unir</button>
+      <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed" disabled><i class="fas fa-copy mr-2"></i>Copiar</button>
+      <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+      <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
+      <div class="flex flex-wrap justify-center gap-3">
+        <a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
+        <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
+        <a href="https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (NFe)</a>
       </div>
     </div>
-    
-    <div id="status" class="status" style="display: none;"></div>
-    <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
-    
-    <canvas id="preview" style="display: none;"></canvas>
-    
-    <h3>📊 Números extraídos:</h3>
-    <textarea id="output" placeholder="Os números extraídos aparecerão aqui..."></textarea>
-    <div id="charCounter" class="char-counter">Dígitos: 0 | Linhas: 0</div>
-    
-    <div class="buttons">
-      <button onclick="cleanAndJoin()" id="cleanJoinBtn" class="secondary" disabled>🧹 Limpar e Unir</button>
-      <button onclick="handleCopyButtonClick()" id="copyBtn" disabled>📋 Copiar</button>
-      <button onclick="clearAll()" id="clearBtn">🗑️ Limpar</button>
+
+    <div class="mt-8">
+      <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
+      <div id="historyContainer" class="space-y-2"></div>
     </div>
 
-    <div class="useful-links">
-        <h3>🔗 Links Úteis de Consulta</h3>
-        <a href="https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp" onclick="searchCnpj(event)" target="_blank" rel="noopener noreferrer" class="link-button">CNPJ</a>
-        <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" onclick="searchCnpj(event)" target="_blank" rel="noopener noreferrer" class="link-button">Simples Nacional</a>
-        <a href="https://www.nfe.fazenda.gov.br/portal/consultaRecaptcha.aspx" onclick="searchNfe(event)" target="_blank" rel="noopener noreferrer" class="link-button">Nota Fiscal (NFe)</a>
-    </div>
-    
-    <div class="history">
-      <h3>📜 Histórico (últimas 5 extrações)</h3>
-      <div id="historyContainer"></div>
-    </div>
-
-    <footer>
-      <p id="signature"></p>
-    </footer>
-
+    <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
   </div>
 
   <script>
-    const output = document.getElementById('output');
-    const preview = document.getElementById('preview');
-    const pasteArea = document.getElementById('pasteArea');
-    const progressBar = document.getElementById('progressBar');
-    const progressFill = document.getElementById('progressFill');
-    const status = document.getElementById('status');
-    const copyBtn = document.getElementById('copyBtn');
-    const cleanJoinBtn = document.getElementById('cleanJoinBtn');
-    const historyContainer = document.getElementById('historyContainer');
-    const charCounter = document.getElementById('charCounter');
-    const signature = document.getElementById('signature');
+    /**
+     * @file Extrator de Números PRO - Versão Final
+     * @author HAlexandre
+     * @version 2.2.0
+     */
 
-    let processingQueue = [];
-    let isProcessing = false;
+    // --- Módulo de UI ---
+    const UI = {
+      /** @property {Object} dom - Mapeamento dos elementos do DOM. */
+      dom: {
+        output: document.getElementById('output'),
+        preview: document.getElementById('preview'),
+        pasteArea: document.getElementById('pasteArea'),
+        fileInput: document.getElementById('fileInput'),
+        progressBar: document.getElementById('progressBar'),
+        progressFill: document.getElementById('progressFill'),
+        status: document.getElementById('status'),
+        copyBtn: document.getElementById('copyBtn'),
+        cleanJoinBtn: document.getElementById('cleanJoinBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        historyContainer: document.getElementById('historyContainer'),
+        charCounter: document.getElementById('charCounter'),
+        signature: document.getElementById('signature'),
+        themeToggle: document.getElementById('themeToggle'),
+        body: document.body,
+        linkButtons: document.querySelectorAll('.link-button')
+      },
 
-    function updateCharCounter() {
-        const text = output.value;
+      /**
+       * Exibe uma mensagem de estado para o utilizador.
+       * @param {string} message - A mensagem a ser exibida.
+       * @param {'processing'|'success'|'error'} type - O tipo de mensagem.
+       */
+      showStatus(message, type = 'processing') {
+        const styles = {
+          processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+          success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+          error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+        };
+        this.dom.status.textContent = message;
+        this.dom.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${styles[type]}`;
+        this.dom.status.classList.remove('hidden');
+      },
+
+      /** Esconde a mensagem de estado. */
+      hideStatus() { this.dom.status.classList.add('hidden'); },
+      
+      /**
+       * Atualiza a barra de progresso.
+       * @param {number} percentage - A percentagem de progresso (0-100).
+       */
+      updateProgress(percentage) {
+        this.dom.progressFill.style.width = `${percentage}%`;
+        this.dom.progressBar.style.display = percentage > 0 ? 'block' : 'none';
+      },
+      
+      /** Atualiza o contador de dígitos e linhas. */
+      updateCharCounter() {
+        const text = this.dom.output.value;
         const digitCount = (text.match(/\d/g) || []).length;
         const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
-        charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
-        if (digitCount === 14 || digitCount === 44) {
-            charCounter.classList.add('valid');
-        } else {
-            charCounter.classList.remove('valid');
-        }
-    }
-
-    output.addEventListener('input', updateCharCounter);
-
-    function showStatus(message, type = 'processing') {
-      status.textContent = message;
-      status.className = `status ${type}`;
-      status.style.display = 'block';
-    }
-    function hideStatus() { status.style.display = 'none'; }
-    function updateProgress(percentage) {
-      progressFill.style.width = percentage + '%';
-      progressBar.style.display = percentage > 0 ? 'block' : 'none';
-    }
-
-    async function preprocessImage(imageSource) {
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.crossOrigin = "Anonymous";
-            img.onload = () => {
-                const canvas = preview;
-                const ctx = canvas.getContext('2d');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                ctx.filter = 'grayscale(1) contrast(1.5)';
-                ctx.drawImage(img, 0, 0);
-                canvas.style.display = 'block';
-                resolve(canvas.toDataURL('image/png'));
-            };
-            img.src = imageSource;
-        });
-    }
-
-    async function processQueue() {
-        if (isProcessing || processingQueue.length === 0) return;
-        isProcessing = true;
+        this.dom.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
         
-        const file = processingQueue.shift();
-        showStatus(`A processar imagem...`, 'processing');
+        const isValid = digitCount === 14 || digitCount === 44;
+        this.dom.charCounter.classList.toggle('text-green-600', isValid);
+        this.dom.charCounter.classList.toggle('dark:text-green-400', isValid);
+      },
+
+      /**
+       * Renderiza o histórico de extrações na página.
+       * @param {Array<Object>} history - O array de itens do histórico.
+       */
+      renderHistory(history) {
+        this.dom.historyContainer.innerHTML = '';
+        if (history.length === 0) {
+          this.dom.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
+          return;
+        }
+        history.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors';
+          div.innerHTML = `
+            <div class="text-xs font-bold text-slate-500 dark:text-slate-400">${item.date}</div>
+            <div class="font-mono text-sm truncate">${item.content.replace(/\n/g, ' | ')}</div>
+          `;
+          div.onclick = () => {
+            this.dom.output.value = item.content;
+            this.updateCharCounter();
+            this.dom.copyBtn.disabled = false;
+            this.dom.cleanJoinBtn.disabled = false;
+          };
+          this.dom.historyContainer.appendChild(div);
+        });
+      },
+
+      /** Carrega o tema salvo ou a preferência do sistema. */
+      loadTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+          this.dom.body.parentElement.classList.add('dark');
+          this.dom.themeToggle.textContent = '☀️';
+        } else {
+          this.dom.themeToggle.textContent = '🌙';
+        }
+      },
+
+      /** Define a assinatura dinâmica no rodapé. */
+      setSignature() {
+        const year = new Date().getFullYear();
+        this.dom.signature.innerHTML = `<p>Feito por HAlexandre © ${year}</p>`;
+      },
+
+      /** Limpa todos os campos e estados da interface. */
+      clearAll() {
+        this.dom.output.value = '';
+        this.dom.preview.getContext('2d').clearRect(0, 0, this.dom.preview.width, this.dom.preview.height);
+        this.dom.preview.style.display = 'none';
+        this.hideStatus();
+        this.updateProgress(0);
+        this.dom.copyBtn.disabled = true;
+        this.dom.cleanJoinBtn.disabled = true;
+        this.updateCharCounter();
+      }
+    };
+
+    // --- Módulo de Clipboard ---
+    const Clipboard = {
+      /**
+       * Copia texto para a área de transferência com fallback.
+       * @param {string} text - O texto a ser copiado.
+       */
+      async copy(text) {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch (err) {
+          console.warn('Modern copy failed, trying fallback.', err);
+          const tempTextarea = document.createElement('textarea');
+          tempTextarea.value = text;
+          document.body.appendChild(tempTextarea);
+          tempTextarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(tempTextarea);
+        }
+      }
+    };
+
+    // --- Módulo de Histórico ---
+    const History = {
+      /**
+       * Salva um item no histórico.
+       * @param {string} text - O texto a ser salvo.
+       */
+      save(text) {
+        if (!text.trim()) return;
+        let history = this.get();
+        history.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
+        history = history.slice(0, 5); // Limita a 5 itens
+        localStorage.setItem('ocrHistory', JSON.stringify(history));
+      },
+      /**
+       * Obtém o histórico do localStorage.
+       * @returns {Array<Object>} O array de itens do histórico.
+       */
+      get() {
+        return JSON.parse(localStorage.getItem('ocrHistory') || '[]');
+      }
+    };
+
+    // --- Módulo de Extração (OCR e Barcode) ---
+    const Extractor = {
+      queue: [],
+      isProcessing: false,
+      
+      /**
+       * Adiciona ficheiros à fila de processamento.
+       * @param {File[]} files - Os ficheiros de imagem a serem processados.
+       */
+      addToQueue(files) {
+        this.queue.push(...files);
+        if (!this.isProcessing) {
+          UI.dom.output.value = '';
+          UI.updateCharCounter();
+          this.processQueue();
+        }
+      },
+
+      /** Processa a fila de imagens de forma sequencial. */
+      async processQueue() {
+        if (this.queue.length === 0) {
+            this.isProcessing = false;
+            if (UI.dom.output.value.trim()) {
+                History.save(UI.dom.output.value);
+                UI.renderHistory(History.get());
+            }
+            return;
+        }
+        this.isProcessing = true;
+        
+        const file = this.queue.shift();
+        UI.showStatus(`A processar ${file.name}...`, 'processing');
         
         const imageURL = URL.createObjectURL(file);
-        const preprocessedImage = await preprocessImage(imageURL);
-
-        let barcodeFound = false;
-        let ocrFound = false;
-
+        
         try {
-            showStatus('🔍 A procurar código de barras...', 'processing');
-            updateProgress(25);
+            const preprocessedImage = await this.preprocessImage(imageURL);
+            let barcodeFound = false;
+            let ocrFound = false;
+
+            // 1. Tentar ler código de barras
+            UI.showStatus('🔍 A procurar código de barras...', 'processing');
+            UI.updateProgress(25);
             try {
                 const codeReader = new ZXing.BrowserMultiFormatReader();
                 const result = await codeReader.decodeFromImageUrl(preprocessedImage);
-                if (result && result.getText()) {
-                    const barcodeText = result.getText();
-                    const currentOutput = output.value;
-                    output.value = (currentOutput ? currentOutput + '\n' : '') + barcodeText;
+                if (result?.getText()) {
+                    UI.dom.output.value += (UI.dom.output.value ? '\n' : '') + result.getText();
                     barcodeFound = true;
                 }
-            } catch (err) {
-                console.log("Nenhum código de barras encontrado, a prosseguir com OCR.", err);
-            }
-
-            showStatus('🔍 A reconhecer texto (OCR)...', 'processing');
-            updateProgress(50);
-            const worker = await Tesseract.createWorker({
-                logger: m => {
-                    if (m.status === 'recognizing text') {
-                        const progress = 50 + Math.round(m.progress * 50);
-                        updateProgress(progress);
-                    }
-                }
-            });
+            } catch (err) { /* Ignorar se não encontrar */ }
+            
+            // 2. Fazer OCR
+            UI.showStatus('🔍 A reconhecer texto (OCR)...', 'processing');
+            const worker = await Tesseract.createWorker({ logger: m => {
+                if (m.status === 'recognizing text') UI.updateProgress(50 + Math.round(m.progress * 50));
+            }});
             await worker.loadLanguage('por');
             await worker.initialize('por');
-            await worker.setParameters({
-                tessedit_char_whitelist: '0123456789.,-%'
-            });
-
+            await worker.setParameters({ tessedit_char_whitelist: '0123456789' });
+            
             const { data } = await worker.recognize(preprocessedImage);
             await worker.terminate();
 
-            const textContent = data.text;
-            const numerosRegex = /[-+]?\d+(?:[.,]\d+)*(?:\s*%)?/g;
-            const numeros = textContent.match(numerosRegex);
-
-            if (numeros && numeros.length > 0) {
-                const numerosLimpos = [...new Set(numeros)].map(n => n.trim()).filter(Boolean);
-                const currentOutput = output.value;
-                output.value = (currentOutput ? currentOutput + '\n' : '') + numerosLimpos.join('\n');
+            const numeros = data.text.match(/\d+/g);
+            if (numeros?.length > 0) {
+                const numerosLimpos = [...new Set(numeros)];
+                UI.dom.output.value += (UI.dom.output.value ? '\n' : '') + numerosLimpos.join('\n');
                 ocrFound = true;
             }
             
-            updateCharCounter();
-            if(barcodeFound || ocrFound) {
-                let successMessage = "✅ ";
-                if(barcodeFound) successMessage += "Código de barras encontrado! ";
-                if(ocrFound) successMessage += "Números extraídos!";
-                showStatus(successMessage, 'success');
-                copyBtn.disabled = false;
-                cleanJoinBtn.disabled = false;
+            // 3. Finalizar
+            UI.updateCharCounter();
+            if (barcodeFound || ocrFound) {
+                let msg = `✅ ${barcodeFound ? 'Código de barras encontrado! ' : ''}${ocrFound ? 'Números extraídos!' : ''}`;
+                UI.showStatus(msg, 'success');
+                UI.dom.copyBtn.disabled = false;
+                UI.dom.cleanJoinBtn.disabled = false;
             } else {
-                 showStatus('⚠️ Nenhum dado reconhecido na imagem.', 'error');
+                UI.showStatus('⚠️ Nenhum dado reconhecido na imagem.', 'error');
             }
-
         } catch (error) {
             console.error('Erro no processamento:', error);
-            showStatus('❌ Erro ao processar imagem.', 'error');
+            UI.showStatus(`❌ Erro ao processar ${file.name}.`, 'error');
         } finally {
             URL.revokeObjectURL(imageURL);
-            isProcessing = false;
-            updateProgress(0);
-            if (processingQueue.length > 0) {
-                processQueue();
-            } else {
-                saveToHistory(output.value);
-                loadHistory();
-            }
+            UI.updateProgress(0);
+            this.processQueue(); // Processa o próximo item da fila
         }
-    }
+      },
 
-    function handleFiles(files) {
-        const imageFiles = [...files].filter(file => file.type.startsWith('image/'));
-        if (imageFiles.length === 0) {
-            showStatus('❌ Por favor, cole um ficheiro de imagem válido', 'error');
-            return;
-        }
-        processingQueue.push(...imageFiles);
-        if (!isProcessing) {
-            output.value = '';
-            updateCharCounter();
-            processQueue();
-        }
-    }
-    
-    document.addEventListener('paste', async (e) => {
-        const items = e.clipboardData?.items;
-        if (!items) return;
-        const imageItem = [...items].find(item => item.type.startsWith('image/'));
-        if (imageItem) {
+      /**
+       * Pré-processa a imagem para melhorar a precisão do OCR.
+       * @param {string} imageSource - O URL da imagem.
+       * @returns {Promise<string>} Uma Promise que resolve com o Data URL da imagem processada.
+       */
+      preprocessImage(imageSource) {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "Anonymous";
+          img.onload = () => {
+            const canvas = UI.dom.preview;
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.filter = 'grayscale(1) contrast(1.5)';
+            ctx.drawImage(img, 0, 0);
+            canvas.style.display = 'block';
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.onerror = () => resolve(null); // Em caso de erro ao carregar a imagem
+          img.src = imageSource;
+        });
+      }
+    };
+
+    // --- Módulo de Eventos ---
+    const Eventos = {
+      /** Configura todos os event listeners da aplicação. */
+      setup() {
+        const handleImageFiles = (files) => {
+            const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (imageFiles.length > 0) Extractor.addToQueue(imageFiles);
+        };
+
+        document.addEventListener('paste', e => {
+          const items = e.clipboardData?.items;
+          if (items) {
             e.preventDefault();
-            const file = imageItem.getAsFile();
-            if (file) handleFiles([file]);
-        }
+            handleImageFiles([...items].filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean));
+          }
+        });
+
+        UI.dom.pasteArea.addEventListener('dragover', e => e.preventDefault());
+        UI.dom.pasteArea.addEventListener('drop', e => {
+          e.preventDefault();
+          if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files);
+        });
+
+        UI.dom.fileInput.addEventListener('change', e => {
+          if (e.target.files.length > 0) handleImageFiles(e.target.files);
+        });
+        
+        UI.dom.cleanJoinBtn.addEventListener('click', () => {
+          const currentText = UI.dom.output.value;
+          if (currentText.trim()) {
+            UI.dom.output.value = currentText.replace(/\D/g, '');
+            UI.updateCharCounter();
+          }
+        });
+
+        UI.dom.copyBtn.addEventListener('click', async () => {
+          if (!UI.dom.output.value.trim()) return;
+          try {
+            await Clipboard.copy(UI.dom.output.value);
+            UI.dom.copyBtn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
+            setTimeout(() => { UI.dom.copyBtn.innerHTML = '<i class="fas fa-copy mr-2"></i>Copiar'; }, 2000);
+          } catch (error) { UI.showStatus('❌ Falha ao copiar.', 'error'); }
+        });
+
+        UI.dom.clearBtn.addEventListener('click', UI.clearAll.bind(UI));
+
+        UI.dom.linkButtons.forEach(button => {
+          button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const { pattern, name } = e.target.dataset;
+            const allDigits = UI.dom.output.value.replace(/\D/g, '');
+            const match = allDigits.match(new RegExp(pattern));
+
+            if (match) {
+              window.open(e.target.href, '_blank');
+              await Clipboard.copy(match[0]);
+              UI.showStatus(`✅ ${name} ${match[0]} copiado! Cole no site que abriu.`, 'success');
+            } else {
+              UI.showStatus(`⚠️ Nenhum ${name} válido (${pattern.length - 2} dígitos) encontrado.`, 'error');
+            }
+          });
+        });
+
+        UI.dom.themeToggle.addEventListener('click', () => {
+          const isDark = UI.dom.body.parentElement.classList.toggle('dark');
+          localStorage.setItem('theme', isDark ? 'dark' : 'light');
+          UI.dom.themeToggle.textContent = isDark ? '☀️' : '🌙';
+        });
+
+        UI.dom.output.addEventListener('input', UI.updateCharCounter.bind(UI));
+      }
+    };
+
+    // --- Inicialização ---
+    document.addEventListener('DOMContentLoaded', () => {
+      UI.loadTheme();
+      UI.setSignature();
+      UI.renderHistory(History.get());
+      Eventos.setup();
     });
 
-    function cleanAndJoin() {
-        const currentText = output.value;
-        if (!currentText.trim()) return;
-        const cleanedText = currentText.replace(/\D/g, '');
-        output.value = cleanedText;
-        updateCharCounter();
-    }
-
-    function copyToClipboard(textToCopy) {
-        return new Promise((resolve, reject) => {
-            navigator.clipboard.writeText(textToCopy).then(resolve).catch(err => {
-                console.warn('Modern copy failed, trying fallback.', err);
-                try {
-                    const tempTextarea = document.createElement('textarea');
-                    tempTextarea.value = textToCopy;
-                    document.body.appendChild(tempTextarea);
-                    tempTextarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempTextarea);
-                    resolve();
-                } catch (fallbackErr) {
-                    console.error('Fallback copy failed.', fallbackErr);
-                    reject(fallbackErr);
-                }
-            });
-        });
-    }
-
-    async function handleCopyButtonClick() {
-        if (!output.value.trim()) return;
-        try {
-            await copyToClipboard(output.value);
-            copyBtn.textContent = '✅ Copiado!';
-            setTimeout(() => { copyBtn.textContent = '📋 Copiar'; }, 2000);
-        } catch (error) {
-            showStatus('❌ Falha ao copiar o texto.', 'error');
-        }
-    }
-
-    // --- FUNÇÕES DE PESQUISA CORRIGIDAS ---
-    async function searchCnpj(event) {
-        event.preventDefault();
-        const allDigits = output.value.replace(/\D/g, '');
-        const cnpjMatch = allDigits.match(/\d{14}/);
-        
-        if (cnpjMatch) {
-            const cnpj = cnpjMatch[0];
-            // Abre a janela primeiro para evitar o bloqueador de pop-up
-            const newWindow = window.open(event.target.href, '_blank');
-            try {
-                await copyToClipboard(cnpj);
-                showStatus(`CNPJ ${cnpj} copiado! Cole no site que abriu.`, 'success');
-            } catch (error) {
-                showStatus('❌ Falha ao copiar o CNPJ. Cole manualmente.', 'error');
-            }
-        } else {
-            showStatus('Nenhum CNPJ de 14 dígitos foi encontrado no texto.', 'error');
-        }
-    }
-
-    async function searchNfe(event) {
-        event.preventDefault();
-        const allDigits = output.value.replace(/\D/g, '');
-        const nfeMatch = allDigits.match(/\d{44}/);
-
-        if (nfeMatch) {
-            const nfe = nfeMatch[0];
-            // Abre a janela primeiro para evitar o bloqueador de pop-up
-            const newWindow = window.open(event.target.href, '_blank');
-            try {
-                await copyToClipboard(nfe);
-                showStatus(`Chave da NFe copiada! Cole no site que abriu.`, 'success');
-            } catch (error) {
-                showStatus('❌ Falha ao copiar a chave da NFe. Cole manualmente.', 'error');
-            }
-        } else {
-            showStatus('Nenhuma chave de NFe de 44 dígitos foi encontrada no texto.', 'error');
-        }
-    }
-
-
-    function clearAll() {
-        output.value = '';
-        preview.style.display = 'none';
-        hideStatus();
-        updateProgress(0);
-        copyBtn.disabled = true;
-        cleanJoinBtn.disabled = true;
-        updateCharCounter();
-    }
-
-    function saveToHistory(text) {
-        if (!text.trim()) return;
-        let history = JSON.parse(localStorage.getItem('ocrHistory') || '[]');
-        history.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
-        history = history.slice(0, 5);
-        localStorage.setItem('ocrHistory', JSON.stringify(history));
-    }
-
-    function loadHistory() {
-        let history = JSON.parse(localStorage.getItem('ocrHistory') || '[]');
-        historyContainer.innerHTML = '';
-        if (history.length === 0) {
-            historyContainer.innerHTML = '<p>Nenhum histórico encontrado.</p>';
-            return;
-        }
-        history.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'history-item';
-            div.innerHTML = `<div class="date">${item.date}</div><div class="content">${item.content.replace(/\n/g, ' | ')}</div>`;
-            div.onclick = () => {
-                output.value = item.content;
-                copyBtn.disabled = false;
-                cleanJoinBtn.disabled = false;
-                updateCharCounter();
-            };
-            historyContainer.appendChild(div);
-        });
-    }
-
-    function setSignature() {
-        const now = new Date();
-        const options = { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
-        const formattedDate = now.toLocaleString('pt-BR', options);
-        signature.textContent = `Feito por HAlexandre em ${formattedDate.replace(',', ' às')}`;
-    }
-
-    window.onload = () => {
-        loadHistory();
-        updateCharCounter();
-        setSignature();
-    };
   </script>
 </body>
 </html>
