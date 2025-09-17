@@ -109,7 +109,7 @@
         /**
          * @file Extrator e Editor PRO - Versão Final e Polida
          * @author HAlexandre
-         * @version 1.2.0
+         * @version 1.2.1
          */
         document.addEventListener('DOMContentLoaded', () => {
             
@@ -167,9 +167,11 @@
                     const digitCount = (text.match(/\d/g) || []).length;
                     const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
                     DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
-                    const isValid = text.replace(/\D/g, '').length === 14 || text.replace(/\D/g, '').length === 44;
-                    DOM.charCounter.classList.toggle('text-green-600', isValid);
-                    DOM.charCounter.classList.toggle('dark:text-green-400', isValid);
+                    const numbersOnly = text.replace(/\D/g, '');
+                    const isValidCnpj = numbersOnly.length === 14;
+                    const isValidNfe = numbersOnly.length === 44;
+                    DOM.charCounter.classList.toggle('text-green-600', isValidCnpj || isValidNfe);
+                    DOM.charCounter.classList.toggle('dark:text-green-400', isValidCnpj || isValidNfe);
                 },
                 renderHistory(history) {
                     DOM.historyContainer.innerHTML = '';
@@ -233,8 +235,9 @@
                            temp.value = text;
                            document.body.appendChild(temp);
                            temp.select();
-                           document.execCommand('copy');
+                           const success = document.execCommand('copy');
                            document.body.removeChild(temp);
+                           if (!success) throw new Error('Fallback copy command failed.');
                            return true;
                         } catch(e) { 
                             console.error('Fallback copy failed', e);
@@ -416,8 +419,11 @@
                         if (keyMap[e.key]) { e.preventDefault(); Rotator.adjust(keyMap[e.key]); }
                         else if (e.key.toLowerCase() === 'r') { e.preventDefault(); Rotator.reset(); }
                         else if (e.key === 'Escape') {
-                             Rotator.hide();
-                             AppState.extraction.queue = [];
+                            const cancelAction = () => {
+                                Rotator.hide();
+                                AppState.extraction.queue = [];
+                            };
+                            cancelAction();
                         }
                     });
 
@@ -477,7 +483,7 @@
                             if (match) {
                                 window.open(e.target.href, '_blank');
                                 await Logic.copyToClipboard(match[0]);
-                                UI.showStatus(`✅ ${name} ${match[0]} copiado! Cole no site que abriu.`, 'success');
+                                UI.showStatus(`✅ ${name} "${match[0]}" copiado! Cole no site que abriu.`, 'success');
                             } else {
                                 UI.showStatus(`⚠️ Nenhum ${name} válido (${pattern.replace(/\\d{/,'').replace(/}/, '')} dígitos) encontrado.`, 'error');
                             }
