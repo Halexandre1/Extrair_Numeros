@@ -107,12 +107,10 @@
 
     <script>
         /**
-         * @file Extrator e Editor PRO - Versão Final e Polida
-         * @author HAlexandre
-         * @version 1.2.1
+         * @file Extrator e Editor PRO - Versão Final e Polida (corrigida)
+         * Correções: (1) Habilitar/desabilitar botões conforme conteúdo; (2) "Limpar e Unir" agrupando números por linha (com deduplicação); (3) Cópia com verificação de contexto seguro e fallback; (4) Uso de e.currentTarget nos links úteis.
          */
         document.addEventListener('DOMContentLoaded', () => {
-            
             const AppState = {
                 rotation: { current: 0, originalData: null },
                 extraction: { queue: [], isProcessing: false, totalFiles: 0, processedFiles: 0 }
@@ -172,6 +170,10 @@
                     const isValidNfe = numbersOnly.length === 44;
                     DOM.charCounter.classList.toggle('text-green-600', isValidCnpj || isValidNfe);
                     DOM.charCounter.classList.toggle('dark:text-green-400', isValidCnpj || isValidNfe);
+                    // Habilita/desabilita botões conforme conteúdo
+                    const hasText = text.trim().length > 0;
+                    DOM.copyBtn.disabled = !hasText;
+                    DOM.cleanJoinBtn.disabled = !hasText;
                 },
                 renderHistory(history) {
                     DOM.historyContainer.innerHTML = '';
@@ -186,8 +188,6 @@
                         div.onclick = () => {
                             DOM.output.value = item.content;
                             this.updateCharCounter();
-                            DOM.copyBtn.disabled = false;
-                            DOM.cleanJoinBtn.disabled = false;
                         };
                         DOM.historyContainer.appendChild(div);
                     });
@@ -199,8 +199,6 @@
                     DOM.preview.style.display = 'none';
                     this.hideStatus();
                     this.updateProgress(0);
-                    DOM.copyBtn.disabled = true;
-                    DOM.cleanJoinBtn.disabled = true;
                     this.updateCharCounter();
                 },
                 toggleTheme() {
@@ -225,24 +223,30 @@
 
             const Logic = {
                 async copyToClipboard(text) {
+                    if (!text || !text.trim()) return false;
                     try {
-                        await navigator.clipboard.writeText(text);
-                        return true;
-                    } catch (err) {
-                        console.warn('Modern copy API failed. Using fallback.');
-                        try {
-                           const temp = document.createElement('textarea');
-                           temp.value = text;
-                           document.body.appendChild(temp);
-                           temp.select();
-                           const success = document.execCommand('copy');
-                           document.body.removeChild(temp);
-                           if (!success) throw new Error('Fallback copy command failed.');
-                           return true;
-                        } catch(e) { 
-                            console.error('Fallback copy failed', e);
-                            return false; 
+                        if (navigator.clipboard && window.isSecureContext) {
+                            await navigator.clipboard.writeText(text);
+                            return true;
                         }
+                    } catch (err) {
+                        console.warn('Clipboard API falhou, tentando fallback...', err);
+                    }
+                    // Fallback
+                    try {
+                        const temp = document.createElement('textarea');
+                        temp.value = text;
+                        temp.style.position = 'fixed';
+                        temp.style.opacity = '0';
+                        document.body.appendChild(temp);
+                        temp.focus();
+                        temp.select();
+                        const success = document.execCommand('copy');
+                        document.body.removeChild(temp);
+                        return !!success;
+                    } catch (e) {
+                        console.error('Fallback copy falhou', e);
+                        return false;
                     }
                 },
                 getHistory() { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
@@ -372,8 +376,6 @@
                         UI.showStatus(`✅ Processamento concluído!`, 'success');
                         Logic.saveHistory(DOM.output.value);
                         UI.renderHistory(Logic.getHistory());
-                        DOM.copyBtn.disabled = false;
-                        DOM.cleanJoinBtn.disabled = false;
                     } else if (AppState.extraction.totalFiles > 0) {
                          UI.showStatus('⚠️ Nenhum dado reconhecido em nenhuma das imagens.', 'error');
                     }
@@ -432,16 +434,21 @@
                     DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
                     DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
 
+                    // ✔ Corrigido: Limpar e Unir agora extrai todos os blocos de dígitos, remove vazios e deduplica, cada um em uma nova linha
                     DOM.cleanJoinBtn.addEventListener('click', () => {
-                        if (DOM.output.value.trim()) {
-                            DOM.output.value = DOM.output.value.replace(/\D/g, '');
+                        const raw = DOM.output.value;
+                        if (raw.trim()) {
+                            const nums = raw.match(/\d+/g) || [];
+                            const unique = [...new Set(nums)];
+                            DOM.output.value = unique.join('\n');
                             UI.updateCharCounter();
                             const btn = DOM.cleanJoinBtn;
                             btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
-                            setTimeout(() => { btn.innerHTML = '<i class="fas fa-broom mr-2"></i>Limpar e Unir'; }, 1500);
+                            setTimeout(() => { btn.innerHTML = '<i class="fas a-broom mr-2"></i>Limpar e Unir'; btn.innerHTML = '<i class="fas fa-broom mr-2"></i>Limpar e Unir'; }, 1500);
                         }
                     });
 
+                    // ✔ Copiar com verificação de contexto seguro + fallback
                     DOM.copyBtn.addEventListener('click', async (e) => {
                         if (!DOM.output.value.trim()) return;
                         const btn = e.currentTarget;
@@ -455,7 +462,7 @@
                     DOM.output.addEventListener('input', () => UI.updateCharCounter());
                     
                     DOM.rotationSlider.addEventListener('input', (e) => {
-                         AppState.rotation.current = parseFloat(e.target.value)
+                         AppState.rotation.current = parseFloat(e.target.value);
                          Rotator.update();
                     });
                     DOM.resetRotationBtn.addEventListener('click', () => Rotator.reset());
@@ -473,19 +480,22 @@
                         await Extractor.processCurrentImage(rotatedBlob);
                     });
 
+                    // ✔ Corrigido: usar currentTarget para pegar data-attributes com segurança
                     DOM.linkButtons.forEach(button => {
                         button.addEventListener('click', async (e) => {
                             e.preventDefault();
-                            const { pattern, name } = e.target.dataset;
+                            const el = e.currentTarget;
+                            const pattern = el.dataset.pattern;
+                            const name = el.dataset.name;
                             const text = DOM.output.value;
                             const match = text.match(new RegExp(pattern));
-                            
                             if (match) {
-                                window.open(e.target.href, '_blank');
+                                window.open(el.href, '_blank');
                                 await Logic.copyToClipboard(match[0]);
                                 UI.showStatus(`✅ ${name} "${match[0]}" copiado! Cole no site que abriu.`, 'success');
                             } else {
-                                UI.showStatus(`⚠️ Nenhum ${name} válido (${pattern.replace(/\\d{/,'').replace(/}/, '')} dígitos) encontrado.`, 'error');
+                                const digits = (pattern.match(/\\d{(\\d+)}/) || [])[1] || '';
+                                UI.showStatus(`⚠️ Nenhum ${name} válido (${digits} dígitos) encontrado.`, 'error');
                             }
                         });
                     });
@@ -498,6 +508,7 @@
                     UI.loadTheme();
                     UI.setSignature();
                     UI.renderHistory(Logic.getHistory());
+                    UI.updateCharCounter(); // inicializa estado dos botões
                 }
             };
 
@@ -506,4 +517,3 @@
     </script>
 </body>
 </html>
-
