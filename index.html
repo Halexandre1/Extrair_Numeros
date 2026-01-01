@@ -3,516 +3,721 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Extrator e Editor PRO</title>
+    <title>Extrator e Editor PRO 2.0 | HAlexandre</title>
+    <meta name="description" content="Ferramenta avançada de OCR e leitura de código de barras. Extraia texto de imagens, rotacione e formate dados automaticamente.">
+    <meta name="author" content="HAlexandre">
+    <meta name="theme-color" content="#4f46e5">
+    
+    <!-- Favicon (Ícone na aba) -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bibliotecas OCR e Barcode -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 500: '#6366f1', 600: '#4f46e5' }
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
         .progress-fill { transition: width 0.3s ease-in-out; }
-        .rotation-modal { backdrop-filter: blur(5px); }
-        .rotation-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 5px; background: #e2e8f0; outline: none; margin-bottom: 15px; }
+        .rotation-modal { backdrop-filter: blur(8px); }
+        
+        /* Slider Estilizado */
+        .rotation-slider { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 5px; background: #e2e8f0; outline: none; margin-bottom: 15px; }
         .dark .rotation-slider { background: #4a5568; }
-        .rotation-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(45deg, #667eea, #764ba2); cursor: pointer; box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; }
-        .rotation-slider::-webkit-slider-thumb:hover { transform: scale(1.2); box-shadow: 0 4px 15px rgba(102, 126, 234, 0.5); }
-        .rotation-slider::-moz-range-thumb { width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(45deg, #667eea, #764ba2); cursor: pointer; border: none; box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3); }
+        .rotation-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #4f46e5; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.2); transition: transform 0.1s; }
+        .rotation-slider::-webkit-slider-thumb:hover { transform: scale(1.1); }
+
+        .drag-active { border-color: #4f46e5 !important; background-color: rgba(79, 70, 229, 0.05); }
     </style>
 </head>
-<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center min-h-screen p-4">
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 min-h-screen flex items-center justify-center p-4">
 
-    <div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
-        <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
+    <div class="container bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-2xl w-full max-w-4xl relative border border-slate-200 dark:border-slate-700 transition-colors">
+        
+        <!-- Theme Toggle -->
+        <button id="themeToggle" class="absolute top-5 right-5 w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all hover:scale-110 hover:bg-slate-200 dark:hover:bg-slate-600 focus:outline-none" aria-label="Alternar tema">
+            <i class="fas fa-moon"></i>
+        </button>
 
-        <header class="text-center mb-6 flex items-center justify-center gap-4">
-            <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logótipo" class="w-12 h-12 rounded-full object-cover">
-            <div>
-                <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">🔄 Extrator e Editor PRO</h2>
-                <p class="text-slate-500 dark:text-slate-400 mt-1">Cole, rotacione e extraia números de qualquer imagem.</p>
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <div class="flex items-center justify-center gap-4 mb-2">
+                <div class="relative group">
+                    <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logo" class="w-14 h-14 rounded-full object-cover shadow-md border-2 border-white dark:border-slate-600 group-hover:scale-105 transition-transform">
+                </div>
+                <div class="text-left">
+                    <h2 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 leading-tight">Extrator PRO <span class="text-xs align-top bg-indigo-100 dark:bg-indigo-900 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">2.0</span></h2>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">OCR Inteligente & Leitor de Código de Barras</p>
+                </div>
             </div>
         </header>
 
-        <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all">
-            <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3"></i>
-            <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste imagens</p>
-            <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
-            <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
-                <i class="fas fa-upload mr-2"></i> Selecionar Ficheiros
-            </label>
+        <!-- Área de Upload -->
+        <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-10 text-center cursor-pointer hover:border-indigo-500 dark:hover:border-indigo-400 transition-all group relative overflow-hidden">
+            <div class="relative z-10 pointer-events-none">
+                <i class="fas fa-cloud-upload-alt text-5xl text-slate-300 dark:text-slate-600 mb-4 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors"></i>
+                <p class="font-semibold text-lg text-slate-600 dark:text-slate-300">Cole uma imagem (Ctrl+V) ou arraste aqui</p>
+                <p class="text-sm text-slate-400 dark:text-slate-500 mt-2">Suporta PNG, JPG, BMP e Clipboard</p>
+            </div>
             <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
         </div>
 
-        <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
-        <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
-            <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width: 0%"></div>
+        <!-- Status e Progresso -->
+        <div id="statusContainer" class="hidden mt-6">
+            <div id="statusMessage" class="text-center text-sm font-semibold text-indigo-600 dark:text-indigo-400 mb-2">Iniciando...</div>
+            <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div id="progressFill" class="bg-indigo-600 h-2 rounded-full progress-fill" style="width: 0%"></div>
+            </div>
         </div>
 
-        <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md hidden"></canvas>
+        <!-- Canvas Invisível para Pré-processamento -->
+        <canvas id="preview" class="hidden"></canvas>
 
-        <div class="mt-6">
-            <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
-            <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition" placeholder="Os números extraídos aparecerão aqui..."></textarea>
-            <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
+        <!-- Área de Saída e Ferramentas -->
+        <div class="mt-8">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <label class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fas fa-terminal"></i> Resultado da Extração
+                </label>
+                
+                <!-- Toolbar de Filtros -->
+                <div class="flex gap-1 overflow-x-auto pb-1 max-w-full no-scrollbar">
+                    <button id="filterNumbersBtn" class="px-3 py-1 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap" title="Manter apenas números">
+                        <i class="fas fa-filter mr-1"></i> Só Números
+                    </button>
+                    <button id="extractKeysBtn" class="px-3 py-1 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap" title="Extrair chaves de 44 dígitos">
+                        <i class="fas fa-key mr-1"></i> Chaves NFe
+                    </button>
+                    <button id="formatBtn" class="px-3 py-1 text-xs font-medium rounded-md bg-slate-100 dark:bg-slate-700 hover:bg-indigo-100 dark:hover:bg-indigo-900 text-slate-600 dark:text-slate-300 transition-colors whitespace-nowrap" title="Aplicar máscaras (CNPJ, CPF, Chaves)">
+                        <i class="fas fa-magic mr-1"></i> Formatar
+                    </button>
+                </div>
+            </div>
+
+            <textarea id="output" class="w-full h-48 p-4 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition resize-y shadow-inner" placeholder="O texto extraído aparecerá aqui..."></textarea>
+            
+            <div class="flex justify-between items-center mt-2">
+                <div id="charCounter" class="text-xs text-slate-400 dark:text-slate-500 font-mono">Linhas: 0 | Caracteres: 0</div>
+                <div class="flex gap-2">
+                    <button id="downloadBtn" class="text-xs text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors" disabled><i class="fas fa-download mr-1"></i> Salvar .txt</button>
+                </div>
+            </div>
         </div>
 
-        <div class="flex flex-wrap justify-center gap-3 mt-4">
-            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-slate-300 dark:disabled:bg-slate-600 disabled:cursor-not-allowed" disabled><i class="fas fa-broom mr-2"></i>Limpar e Unir</button>
-            <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:bg-blue-300 dark:disabled:bg-blue-800 disabled:cursor-not-allowed" disabled><i class="fas fa-copy mr-2"></i>Copiar</button>
-            <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+        <!-- Botões Principais -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
+            <button id="cleanJoinBtn" class="col-span-1 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                <i class="fas fa-broom"></i> <span class="hidden sm:inline">Limpar</span>
+            </button>
+            <button id="copyBtn" class="col-span-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none" disabled>
+                <i class="fas fa-copy"></i> Copiar
+            </button>
+            <button id="clearBtn" class="col-span-2 md:col-span-1 md:col-start-4 bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-semibold py-2.5 px-4 rounded-lg transition-all border border-red-200 dark:border-red-800/50 flex items-center justify-center gap-2">
+                <i class="fas fa-trash-alt"></i> Limpar Tudo
+            </button>
         </div>
         
-        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
-             <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
-             <div class="flex flex-wrap justify-center gap-3">
-               <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
-               <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="Simples Nacional" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
-               <a href="https://consultadanfe.com/" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
+        <!-- Links Úteis -->
+        <div class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700">
+             <h3 class="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 text-center">Consultas Rápidas</h3>
+             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+               <a href="https://halexandre1.github.io/ConsultaCNPJ/" target="_blank" class="link-helper group flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-300 no-underline">
+                   <div class="flex items-center gap-3">
+                       <div class="w-8 h-8 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 flex items-center justify-center"><i class="fas fa-building"></i></div>
+                       <span>Consulta CNPJ</span>
+                   </div>
+                   <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500"></i>
+               </a>
+               <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" target="_blank" class="link-helper group flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-300 no-underline">
+                   <div class="flex items-center gap-3">
+                       <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center"><i class="fas fa-search-dollar"></i></div>
+                       <span>Simples Nacional</span>
+                   </div>
+                   <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500"></i>
+               </a>
+               <a href="https://consultadanfe.com/" target="_blank" class="link-helper group flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-500 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all cursor-pointer text-sm font-medium text-slate-600 dark:text-slate-300 no-underline">
+                   <div class="flex items-center gap-3">
+                       <div class="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 flex items-center justify-center"><i class="fas fa-file-invoice"></i></div>
+                       <span>Consulta NFe</span>
+                   </div>
+                   <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100 transition-opacity text-indigo-500"></i>
+               </a>
              </div>
         </div>
+
+        <!-- Histórico -->
         <div class="mt-8">
-             <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
-             <div id="historyContainer" class="space-y-2"></div>
+             <div class="flex justify-between items-end mb-3">
+                 <h3 class="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Histórico Recente</h3>
+                 <button onclick="localStorage.removeItem('ocrHistory'); window.location.reload();" class="text-xs text-red-400 hover:text-red-500 hover:underline">Limpar Histórico</button>
+             </div>
+             <div id="historyContainer" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1"></div>
         </div>
 
-        <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
+        <footer class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+            <div id="signature" class="text-sm text-slate-500 dark:text-slate-400 font-medium"></div>
+        </footer>
     </div>
 
-    <div id="rotationModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
-            <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Fechar">&times;</button>
-            <h3 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-4">Ajustar Rotação da Imagem</h3>
-            <div class="image-container mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg">
-                <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 ease-in-out rounded-md" alt="Imagem para rotacionar">
+    <!-- Modal de Rotação -->
+    <div id="rotationModal" class="fixed inset-0 bg-slate-900/80 flex items-center justify-center p-4 z-50 hidden rotation-modal opacity-0 transition-opacity duration-300">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl p-6 relative transform scale-95 transition-transform duration-300">
+            <button id="closeModalBtn" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors flex items-center justify-center z-10"><i class="fas fa-times"></i></button>
+            
+            <h3 class="text-xl font-bold text-slate-800 dark:text-white text-center mb-6">Ajustar Rotação</h3>
+            
+            <div class="relative bg-slate-100 dark:bg-slate-900 rounded-xl overflow-hidden mb-6 flex items-center justify-center min-h-[300px] max-h-[50vh] border border-slate-200 dark:border-slate-700">
+                <!-- Grid Overlay para referência -->
+                <div class="absolute inset-0 pointer-events-none opacity-10 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+                <img id="rotatableImage" class="max-w-full max-h-full transition-transform duration-200 ease-out shadow-lg" alt="Preview">
             </div>
-            <div class="controls mt-4 max-w-lg mx-auto">
-                 <div class="control-group">
-                     <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-2">Ângulo: <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span></label>
+
+            <div class="max-w-xl mx-auto space-y-6">
+                 <div class="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                     <div class="flex justify-between items-center mb-3">
+                         <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Ângulo</label>
+                         <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-mono font-bold bg-indigo-50 dark:bg-indigo-900/30 px-2 py-1 rounded text-sm">0.0°</span>
+                     </div>
                      <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
+                     
+                     <div class="flex justify-between gap-1 mt-2">
+                         <button class="quick-btn p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-mono text-slate-600 dark:text-slate-300 transition-colors" data-angle="-90">-90°</button>
+                         <button class="quick-btn p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-mono text-slate-600 dark:text-slate-300 transition-colors" data-angle="-1">-1°</button>
+                         <button class="quick-btn p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-mono text-slate-600 dark:text-slate-300 transition-colors" data-angle="0" id="resetRotationBtn">0°</button>
+                         <button class="quick-btn p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-mono text-slate-600 dark:text-slate-300 transition-colors" data-angle="1">+1°</button>
+                         <button class="quick-btn p-2 rounded hover:bg-slate-200 dark:hover:bg-slate-600 text-xs font-mono text-slate-600 dark:text-slate-300 transition-colors" data-angle="90">+90°</button>
+                     </div>
                  </div>
-                 <div class="quick-controls flex justify-center gap-2 mb-4">
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
-                 </div>
-                 <div class="flex justify-center gap-4">
-                     <button id="cancelRotationBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-times mr-2"></i>Cancelar</button>
-                     <button id="resetRotationBtn" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-sync-alt mr-2"></i>Resetar</button>
-                     <button id="confirmRotationBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg"><i class="fas fa-check mr-2"></i>Confirmar e Extrair</button>
+
+                 <div class="flex gap-3">
+                     <button id="cancelRotationBtn" class="flex-1 py-3 px-4 rounded-xl font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancelar</button>
+                     <button id="confirmRotationBtn" class="flex-1 py-3 px-4 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all transform active:scale-95">Confirmar e Extrair</button>
                  </div>
             </div>
         </div>
     </div>
 
     <script>
-        /**
-         * @file Extrator e Editor PRO - Versão Final e Polida (corrigida)
-         * Correções: (1) Habilitar/desabilitar botões conforme conteúdo; (2) "Limpar e Unir" agrupando números por linha (com deduplicação); (3) Cópia com verificação de contexto seguro e fallback; (4) Uso de e.currentTarget nos links úteis.
-         */
         document.addEventListener('DOMContentLoaded', () => {
+            // --- GESTÃO DO ESTADO ---
             const AppState = {
                 rotation: { current: 0, originalData: null },
-                extraction: { queue: [], isProcessing: false, totalFiles: 0, processedFiles: 0 }
+                extraction: { queue: [], isProcessing: false, totalFiles: 0, processedFiles: 0 },
+                worker: null // Worker Tesseract persistente
             };
 
+            // --- MAPEAMENTO DO DOM ---
             const DOM = {
-                output: document.getElementById('output'),
-                preview: document.getElementById('preview'),
+                body: document.body,
+                themeToggle: document.getElementById('themeToggle'),
                 pasteArea: document.getElementById('pasteArea'),
                 fileInput: document.getElementById('fileInput'),
-                progressBar: document.getElementById('progressBar'),
-                progressFill: document.getElementById('progressFill'),
-                status: document.getElementById('status'),
-                copyBtn: document.getElementById('copyBtn'),
-                cleanJoinBtn: document.getElementById('cleanJoinBtn'),
-                clearBtn: document.getElementById('clearBtn'),
-                historyContainer: document.getElementById('historyContainer'),
+                output: document.getElementById('output'),
                 charCounter: document.getElementById('charCounter'),
-                signature: document.getElementById('signature'),
-                themeToggle: document.getElementById('themeToggle'),
-                body: document.body.parentElement,
-                linkButtons: document.querySelectorAll('.link-button'),
+                statusContainer: document.getElementById('statusContainer'),
+                statusMessage: document.getElementById('statusMessage'),
+                progressFill: document.getElementById('progressFill'),
+                preview: document.getElementById('preview'),
+                // Botões
+                cleanJoinBtn: document.getElementById('cleanJoinBtn'),
+                copyBtn: document.getElementById('copyBtn'),
+                clearBtn: document.getElementById('clearBtn'),
+                downloadBtn: document.getElementById('downloadBtn'),
+                // Toolbar
+                filterNumbersBtn: document.getElementById('filterNumbersBtn'),
+                extractKeysBtn: document.getElementById('extractKeysBtn'),
+                formatBtn: document.getElementById('formatBtn'),
+                // Modal Rotação
                 rotationModal: document.getElementById('rotationModal'),
                 rotatableImage: document.getElementById('rotatableImage'),
                 rotationSlider: document.getElementById('rotationSlider'),
                 angleDisplay: document.getElementById('angleDisplay'),
-                quickBtns: document.querySelectorAll('.quick-btn'),
-                resetRotationBtn: document.getElementById('resetRotationBtn'),
                 confirmRotationBtn: document.getElementById('confirmRotationBtn'),
                 closeModalBtn: document.getElementById('closeModalBtn'),
                 cancelRotationBtn: document.getElementById('cancelRotationBtn'),
+                quickBtns: document.querySelectorAll('.quick-btn'),
+                // Outros
+                historyContainer: document.getElementById('historyContainer'),
+                signature: document.getElementById('signature'),
+                linkHelpers: document.querySelectorAll('.link-helper')
             };
 
-            const UI = {
-                showStatus(message, type = 'processing') {
-                    const styles = {
-                        processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-                        success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-                        error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-                    };
-                    DOM.status.textContent = message;
-                    DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${styles[type] || styles.processing}`;
-                    DOM.status.classList.remove('hidden');
-                },
-                hideStatus() { DOM.status.classList.add('hidden'); },
-                updateProgress(percentage) {
-                    DOM.progressFill.style.width = `${percentage}%`;
-                    DOM.progressBar.style.display = percentage > 0 && percentage < 100 ? 'block' : 'none';
-                },
-                updateCharCounter() {
-                    const text = DOM.output.value;
-                    const digitCount = (text.match(/\d/g) || []).length;
-                    const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
-                    DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
-                    const numbersOnly = text.replace(/\D/g, '');
-                    const isValidCnpj = numbersOnly.length === 14;
-                    const isValidNfe = numbersOnly.length === 44;
-                    DOM.charCounter.classList.toggle('text-green-600', isValidCnpj || isValidNfe);
-                    DOM.charCounter.classList.toggle('dark:text-green-400', isValidCnpj || isValidNfe);
-                    // Habilita/desabilita botões conforme conteúdo
-                    const hasText = text.trim().length > 0;
-                    DOM.copyBtn.disabled = !hasText;
-                    DOM.cleanJoinBtn.disabled = !hasText;
-                },
-                renderHistory(history) {
-                    DOM.historyContainer.innerHTML = '';
-                    if (history.length === 0) {
-                        DOM.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
-                        return;
-                    }
-                    history.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'bg-slate-100 dark:bg-slate-700 p-3 rounded-lg cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors';
-                        div.innerHTML = `<div class="text-xs font-bold text-slate-500 dark:text-slate-400">${item.date}</div><div class="font-mono text-sm truncate">${item.content.replace(/\n/g, ' | ')}</div>`;
-                        div.onclick = () => {
-                            DOM.output.value = item.content;
-                            this.updateCharCounter();
-                        };
-                        DOM.historyContainer.appendChild(div);
-                    });
-                },
-                clearAll() {
-                    DOM.output.value = '';
-                    const ctx = DOM.preview.getContext('2d');
-                    if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
-                    DOM.preview.style.display = 'none';
-                    this.hideStatus();
-                    this.updateProgress(0);
-                    this.updateCharCounter();
-                },
-                toggleTheme() {
-                    const isDark = DOM.body.classList.toggle('dark');
-                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                    DOM.themeToggle.textContent = isDark ? '☀️' : '🌙';
-                },
-                loadTheme() {
-                    const savedTheme = localStorage.getItem('theme');
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-                        DOM.body.classList.add('dark');
-                        DOM.themeToggle.textContent = '☀️';
-                    } else {
-                        DOM.themeToggle.textContent = '🌙';
-                    }
-                },
-                setSignature() {
-                    DOM.signature.innerHTML = `<p>Feito por HAlexandre © ${new Date().getFullYear()}</p>`;
-                }
-            };
-
+            // --- LÓGICA DE NEGÓCIO ---
             const Logic = {
-                async copyToClipboard(text) {
-                    if (!text || !text.trim()) return false;
-                    try {
-                        if (navigator.clipboard && window.isSecureContext) {
-                            await navigator.clipboard.writeText(text);
-                            return true;
-                        }
-                    } catch (err) {
-                        console.warn('Clipboard API falhou, tentando fallback...', err);
-                    }
-                    // Fallback
-                    try {
-                        const temp = document.createElement('textarea');
-                        temp.value = text;
-                        temp.style.position = 'fixed';
-                        temp.style.opacity = '0';
-                        document.body.appendChild(temp);
-                        temp.focus();
-                        temp.select();
-                        const success = document.execCommand('copy');
-                        document.body.removeChild(temp);
-                        return !!success;
-                    } catch (e) {
-                        console.error('Fallback copy falhou', e);
-                        return false;
-                    }
-                },
-                getHistory() { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
-                saveHistory(text) {
-                    if (!text.trim()) return;
-                    let history = this.getHistory();
-                    history.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
-                    history = history.slice(0, 5);
-                    localStorage.setItem('ocrHistory', JSON.stringify(history));
-                },
-                async getRotatedImageBlob() {
-                    return new Promise((resolve) => {
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const img = new Image();
-                        img.onload = () => {
-                            const rad = (AppState.rotation.current * Math.PI) / 180;
-                            const sin = Math.abs(Math.sin(rad));
-                            const cos = Math.abs(Math.cos(rad));
-                            canvas.width = img.width * cos + img.height * sin;
-                            canvas.height = img.width * sin + img.height * cos;
-                            ctx.translate(canvas.width / 2, canvas.height / 2);
-                            ctx.rotate(rad);
-                            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                            canvas.toBlob(resolve, 'image/png');
-                        };
-                        img.src = AppState.rotation.originalData;
-                    });
-                }
-            };
-            
-            const Rotator = {
-                showNext() {
-                    const file = AppState.extraction.queue.shift();
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            AppState.rotation.originalData = e.target.result;
-                            DOM.rotatableImage.src = AppState.rotation.originalData;
-                            this.reset();
-                            DOM.rotationModal.classList.remove('hidden');
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        Extractor.finalize();
-                    }
-                },
-                hide() { DOM.rotationModal.classList.add('hidden'); },
-                update() {
-                    DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
-                    DOM.angleDisplay.textContent = `${AppState.rotation.current.toFixed(1)}°`;
-                    DOM.rotationSlider.value = AppState.rotation.current;
-                },
-                adjust(angle) {
-                    AppState.rotation.current = Math.max(-180, Math.min(180, AppState.rotation.current + angle));
-                    this.update();
-                },
-                reset() {
-                    AppState.rotation.current = 0;
-                    this.update();
-                }
-            };
-
-            const Extractor = {
-                start(files) {
-                    AppState.extraction.queue = files;
-                    AppState.extraction.totalFiles = files.length;
-                    AppState.extraction.processedFiles = 0;
-                    UI.clearAll();
-                    Rotator.showNext();
-                },
-                async processCurrentImage(rotatedBlob) {
-                    const file = new File([rotatedBlob], "imagem_processada.png", { type: 'image/png' });
-                    AppState.extraction.processedFiles++;
-                    const progressText = AppState.extraction.totalFiles > 1 ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})` : '';
-                    UI.showStatus(`A processar ${file.name} ${progressText}...`, 'processing');
-                    
-                    const imageURL = URL.createObjectURL(file);
-                    
-                    try {
-                        const preprocessedImage = await this.preprocessImage(imageURL);
-                        let barcodeFound = false, ocrFound = false;
-
-                        UI.showStatus(`🔍 Procurando código de barras... ${progressText}`, 'processing');
-                        UI.updateProgress(25);
-                        try {
-                            const codeReader = new ZXing.BrowserMultiFormatReader();
-                            const result = await codeReader.decodeFromImageUrl(preprocessedImage);
-                            if (result?.getText()) {
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + result.getText();
-                                barcodeFound = true;
+                async initWorker() {
+                    if (!AppState.worker) {
+                        const worker = await Tesseract.createWorker({
+                            logger: m => {
+                                if (m.status === 'recognizing text') {
+                                    UI.updateProgress(50 + Math.round(m.progress * 50));
+                                }
                             }
-                        } catch (err) { /* Ignorar */ }
-                        
-                        UI.showStatus(`🔍 Reconhecendo texto (OCR)... ${progressText}`, 'processing');
-                        const worker = await Tesseract.createWorker({ logger: m => {
-                            if (m.status === 'recognizing text') UI.updateProgress(50 + Math.round(m.progress * 50));
-                        }});
+                        });
                         await worker.loadLanguage('por');
                         await worker.initialize('por');
-                        await worker.setParameters({ tessedit_char_whitelist: '0123456789' });
-                        
-                        const { data } = await worker.recognize(preprocessedImage);
-                        await worker.terminate();
+                        await worker.setParameters({ tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz/-., ' });
+                        AppState.worker = worker;
+                    }
+                    return AppState.worker;
+                },
 
-                        const numeros = data.text.match(/\d+/g);
-                        if (numeros?.length > 0) {
-                            DOM.output.value += (DOM.output.value ? '\n' : '') + [...new Set(numeros)].join('\n');
-                            ocrFound = true;
-                        }
-                        
-                        if (!barcodeFound && !ocrFound) {
-                           UI.showStatus(`⚠️ Nenhum dado reconhecido na imagem ${progressText}.`, 'error');
-                        }
+                async processImage(blob) {
+                    const url = URL.createObjectURL(blob);
+                    let resultText = '';
+                    let barcodeFound = false;
 
-                    } catch (error) {
-                        console.error('Erro no processamento:', error);
-                        UI.showStatus(`❌ Erro ao processar imagem ${progressText}.`, 'error');
+                    // 1. Tentar Código de Barras (ZXing)
+                    try {
+                        const codeReader = new ZXing.BrowserMultiFormatReader();
+                        const result = await codeReader.decodeFromImageUrl(url);
+                        if (result?.getText()) {
+                            resultText += `[BARRAS]: ${result.getText()}\n`;
+                            barcodeFound = true;
+                        }
+                    } catch (e) { /* Sem código de barras */ }
+
+                    // 2. OCR (Tesseract)
+                    try {
+                        const preprocessedUrl = await ImageProc.preprocess(url);
+                        const worker = await this.initWorker();
+                        const { data } = await worker.recognize(preprocessedUrl);
+                        
+                        if (data.text.trim()) {
+                            resultText += data.text;
+                        }
+                    } catch (e) {
+                        console.error("Erro OCR:", e);
+                        throw e;
                     } finally {
-                        URL.revokeObjectURL(imageURL);
-                        UI.updateProgress(100);
-                        Rotator.showNext();
+                        URL.revokeObjectURL(url);
                     }
+
+                    return resultText;
                 },
-                finalize() {
-                    if (DOM.output.value.trim()) {
-                        UI.showStatus(`✅ Processamento concluído!`, 'success');
-                        Logic.saveHistory(DOM.output.value);
-                        UI.renderHistory(Logic.getHistory());
-                    } else if (AppState.extraction.totalFiles > 0) {
-                         UI.showStatus('⚠️ Nenhum dado reconhecido em nenhuma das imagens.', 'error');
-                    }
-                    UI.updateCharCounter();
-                    AppState.extraction.isProcessing = false;
+
+                // Ferramentas de Texto
+                filterNumbers(text) {
+                    // Pega tudo que é digito, separa por quebra de linha
+                    const nums = text.match(/\d+/g);
+                    return nums ? [...new Set(nums)].join('\n') : '';
                 },
-                preprocessImage(imageSource) {
-                    return new Promise((resolve, reject) => {
+
+                extractAccessKeys(text) {
+                    const nums = text.replace(/\D/g, '');
+                    // Busca sequências de 44 dígitos
+                    const keys = nums.match(/\d{44}/g);
+                    return keys ? [...new Set(keys)].join('\n') : '';
+                },
+
+                formatSmart(text) {
+                    const lines = text.split('\n');
+                    return lines.map(line => {
+                        const clean = line.replace(/\D/g, '');
+                        // CNPJ
+                        if (clean.length === 14) return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+                        // CPF
+                        if (clean.length === 11) return clean.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+                        // Chave NFe (espaço a cada 4)
+                        if (clean.length === 44) return clean.replace(/(\d{4})/g, '$1 ').trim();
+                        return line; // Retorna original se não casar padrão
+                    }).join('\n');
+                },
+
+                saveHistory(text) {
+                    if (!text.trim()) return;
+                    const history = JSON.parse(localStorage.getItem('ocrHistory') || '[]');
+                    // Evita duplicatas no topo
+                    if (history.length > 0 && history[0].content === text) return;
+                    
+                    history.unshift({ 
+                        date: new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}), 
+                        content: text 
+                    });
+                    localStorage.setItem('ocrHistory', JSON.stringify(history.slice(0, 10))); // Guarda últimos 10
+                    UI.renderHistory();
+                }
+            };
+
+            // --- PROCESSAMENTO DE IMAGEM ---
+            const ImageProc = {
+                preprocess(src) {
+                    return new Promise((resolve) => {
                         const img = new Image();
-                        img.crossOrigin = "Anonymous";
                         img.onload = () => {
                             const canvas = DOM.preview;
                             const ctx = canvas.getContext('2d');
                             canvas.width = img.width;
                             canvas.height = img.height;
-                            ctx.filter = 'grayscale(1) contrast(1.5)';
+                            
+                            // Filtros básicos para melhorar OCR
+                            ctx.filter = 'grayscale(1) contrast(1.4) brightness(1.1)';
                             ctx.drawImage(img, 0, 0);
-                            canvas.style.display = 'block';
                             resolve(canvas.toDataURL('image/png'));
                         };
-                        img.onerror = () => reject(new Error("Falha ao carregar a imagem para pré-processamento."));
-                        img.src = imageSource;
+                        img.src = src;
+                    });
+                },
+                
+                getRotatedBlob(angle, imgSrc) {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const ctx = canvas.getContext('2d');
+                            const rad = (angle * Math.PI) / 180;
+                            
+                            // Calcular novas dimensões da bounding box
+                            const sin = Math.abs(Math.sin(rad));
+                            const cos = Math.abs(Math.cos(rad));
+                            canvas.width = img.width * cos + img.height * sin;
+                            canvas.height = img.width * sin + img.height * cos;
+                            
+                            ctx.translate(canvas.width / 2, canvas.height / 2);
+                            ctx.rotate(rad);
+                            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                            
+                            canvas.toBlob(resolve, 'image/png', 0.9);
+                        };
+                        img.src = imgSrc;
                     });
                 }
             };
-            
-            const Events = {
-                setup() {
-                    const handleImageFiles = (files) => {
-                        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-                        if (imageFiles.length > 0) Extractor.start(imageFiles);
-                    };
+
+            // --- INTERFACE (UI) ---
+            const UI = {
+                init() {
+                    this.loadTheme();
+                    this.renderHistory();
+                    DOM.signature.innerHTML = `Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre © ${new Date().getFullYear()}`;
+                },
+
+                loadTheme() {
+                    const saved = localStorage.getItem('theme');
+                    const preferDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    if (saved === 'dark' || (!saved && preferDark)) {
+                        DOM.body.classList.add('dark');
+                        DOM.themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+                    } else {
+                        DOM.themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+                    }
+                },
+
+                toggleTheme() {
+                    DOM.body.classList.toggle('dark');
+                    const isDark = DOM.body.classList.contains('dark');
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                    DOM.themeToggle.innerHTML = isDark ? '<i class="fas fa-sun text-yellow-400"></i>' : '<i class="fas fa-moon"></i>';
+                },
+
+                showModal(imgSrc) {
+                    DOM.rotatableImage.src = imgSrc;
+                    AppState.rotation.originalData = imgSrc;
+                    AppState.rotation.current = 0;
+                    this.updateRotationUI();
                     
-                    document.addEventListener('paste', e => {
-                        if (!DOM.rotationModal.classList.contains('hidden')) return;
-                        const imageFile = [...(e.clipboardData?.items || [])].map(i => i.getAsFile()).find(f => f?.type.startsWith('image/'));
-                        if (imageFile) { e.preventDefault(); Extractor.start([imageFile]); }
-                    });
+                    DOM.rotationModal.classList.remove('hidden');
+                    // Pequeno delay para animação CSS
+                    setTimeout(() => DOM.rotationModal.classList.remove('opacity-0'), 10);
+                    DOM.rotationModal.querySelector('.relative').classList.remove('scale-95');
+                    DOM.rotationModal.querySelector('.relative').classList.add('scale-100');
+                },
 
-                    document.addEventListener('keydown', e => {
-                        if (DOM.rotationModal.classList.contains('hidden')) return;
-                        const keyMap = { ArrowLeft: e.shiftKey ? -10 : -1, ArrowRight: e.shiftKey ? 10 : 1 };
-                        if (keyMap[e.key]) { e.preventDefault(); Rotator.adjust(keyMap[e.key]); }
-                        else if (e.key.toLowerCase() === 'r') { e.preventDefault(); Rotator.reset(); }
-                        else if (e.key === 'Escape') {
-                            const cancelAction = () => {
-                                Rotator.hide();
-                                AppState.extraction.queue = [];
-                            };
-                            cancelAction();
-                        }
-                    });
+                hideModal() {
+                    DOM.rotationModal.classList.add('opacity-0');
+                    DOM.rotationModal.querySelector('.relative').classList.remove('scale-100');
+                    DOM.rotationModal.querySelector('.relative').classList.add('scale-95');
+                    setTimeout(() => DOM.rotationModal.classList.add('hidden'), 300);
+                },
 
-                    DOM.pasteArea.addEventListener('click', () => DOM.fileInput.click());
-                    DOM.pasteArea.addEventListener('dragover', e => e.preventDefault());
-                    DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
-                    DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
+                updateRotationUI() {
+                    DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
+                    DOM.angleDisplay.textContent = `${AppState.rotation.current.toFixed(1)}°`;
+                    DOM.rotationSlider.value = AppState.rotation.current;
+                },
 
-                    // ✔ Corrigido: Limpar e Unir agora extrai todos os blocos de dígitos, remove vazios e deduplica, cada um em uma nova linha
-                    DOM.cleanJoinBtn.addEventListener('click', () => {
-                        const raw = DOM.output.value;
-                        if (raw.trim()) {
-                            const nums = raw.match(/\d+/g) || [];
-                            const unique = [...new Set(nums)];
-                            DOM.output.value = unique.join('\n');
-                            UI.updateCharCounter();
-                            const btn = DOM.cleanJoinBtn;
-                            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
-                            setTimeout(() => { btn.innerHTML = '<i class="fas a-broom mr-2"></i>Limpar e Unir'; btn.innerHTML = '<i class="fas fa-broom mr-2"></i>Limpar e Unir'; }, 1500);
-                        }
-                    });
+                showProgress(show, message = '') {
+                    if (show) {
+                        DOM.statusContainer.classList.remove('hidden');
+                        DOM.statusMessage.textContent = message;
+                        DOM.progressFill.style.width = '0%';
+                        // Bloquear botões
+                        DOM.pasteArea.classList.add('pointer-events-none', 'opacity-50');
+                    } else {
+                        DOM.statusContainer.classList.add('hidden');
+                        DOM.pasteArea.classList.remove('pointer-events-none', 'opacity-50');
+                    }
+                },
 
-                    // ✔ Copiar com verificação de contexto seguro + fallback
-                    DOM.copyBtn.addEventListener('click', async (e) => {
-                        if (!DOM.output.value.trim()) return;
-                        const btn = e.currentTarget;
-                        const success = await Logic.copyToClipboard(DOM.output.value);
-                        btn.innerHTML = success ? '<i class="fas fa-check mr-2"></i>Copiado!' : '<i class="fas fa-times mr-2"></i>Falhou!';
-                        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy mr-2"></i>Copiar'; }, 2000);
-                    });
+                updateProgress(percent) {
+                    DOM.progressFill.style.width = `${percent}%`;
+                },
+
+                updateOutput(text, append = false) {
+                    if (append && DOM.output.value) {
+                        DOM.output.value += '\n' + text;
+                    } else {
+                        DOM.output.value = text;
+                    }
+                    this.updateCounters();
+                    if (text.trim()) Logic.saveHistory(DOM.output.value);
+                },
+
+                updateCounters() {
+                    const text = DOM.output.value;
+                    const lines = text.split('\n').filter(l => l.trim()).length;
+                    const chars = text.length;
+                    DOM.charCounter.textContent = `Linhas: ${lines} | Caracteres: ${chars}`;
                     
-                    DOM.clearBtn.addEventListener('click', () => UI.clearAll());
-                    DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
-                    DOM.output.addEventListener('input', () => UI.updateCharCounter());
-                    
-                    DOM.rotationSlider.addEventListener('input', (e) => {
-                         AppState.rotation.current = parseFloat(e.target.value);
-                         Rotator.update();
-                    });
-                    DOM.resetRotationBtn.addEventListener('click', () => Rotator.reset());
-                    const cancelAction = () => {
-                        Rotator.hide();
-                        AppState.extraction.queue = [];
-                    };
-                    DOM.closeModalBtn.addEventListener('click', cancelAction);
-                    DOM.cancelRotationBtn.addEventListener('click', cancelAction);
-                    DOM.quickBtns.forEach(btn => btn.addEventListener('click', e => Rotator.adjust(parseFloat(e.currentTarget.dataset.angle))));
-                    
-                    DOM.confirmRotationBtn.addEventListener('click', async () => {
-                        Rotator.hide();
-                        const rotatedBlob = await Logic.getRotatedImageBlob();
-                        await Extractor.processCurrentImage(rotatedBlob);
-                    });
+                    const hasText = text.length > 0;
+                    DOM.copyBtn.disabled = !hasText;
+                    DOM.cleanJoinBtn.disabled = !hasText;
+                    DOM.downloadBtn.disabled = !hasText;
+                },
 
-                    // ✔ Corrigido: usar currentTarget para pegar data-attributes com segurança
-                    DOM.linkButtons.forEach(button => {
-                        button.addEventListener('click', async (e) => {
+                renderHistory() {
+                    const history = JSON.parse(localStorage.getItem('ocrHistory') || '[]');
+                    DOM.historyContainer.innerHTML = '';
+                    
+                    if (history.length === 0) {
+                        DOM.historyContainer.innerHTML = `<div class="text-center text-xs text-slate-400 py-4 italic">Nenhum histórico recente.</div>`;
+                        return;
+                    }
+
+                    history.forEach((item) => {
+                        const el = document.createElement('div');
+                        el.className = 'bg-slate-50 dark:bg-slate-700/50 p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-colors group';
+                        el.innerHTML = `
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="text-[10px] font-bold text-indigo-500 uppercase">${item.date}</span>
+                                <button class="text-slate-400 hover:text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" title="Usar este texto"><i class="fas fa-arrow-up"></i></button>
+                            </div>
+                            <div class="text-xs font-mono text-slate-600 dark:text-slate-300 truncate">${item.content.replace(/\n/g, ' ')}</div>
+                        `;
+                        el.onclick = () => {
+                            DOM.output.value = item.content;
+                            UI.updateCounters();
+                        };
+                        DOM.historyContainer.appendChild(el);
+                    });
+                }
+            };
+
+            // --- CONTROLLER (Eventos) ---
+            const Controller = {
+                start() {
+                    // Drag & Drop
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                        DOM.pasteArea.addEventListener(eventName, e => {
                             e.preventDefault();
-                            const el = e.currentTarget;
-                            const pattern = el.dataset.pattern;
-                            const name = el.dataset.name;
-                            const text = DOM.output.value;
-                            const match = text.match(new RegExp(pattern));
-                            if (match) {
-                                window.open(el.href, '_blank');
-                                await Logic.copyToClipboard(match[0]);
-                                UI.showStatus(`✅ ${name} "${match[0]}" copiado! Cole no site que abriu.`, 'success');
-                            } else {
-                                const digits = (pattern.match(/\\d{(\\d+)}/) || [])[1] || '';
-                                UI.showStatus(`⚠️ Nenhum ${name} válido (${digits} dígitos) encontrado.`, 'error');
+                            e.stopPropagation();
+                        });
+                    });
+
+                    DOM.pasteArea.addEventListener('dragover', () => DOM.pasteArea.classList.add('drag-active'));
+                    DOM.pasteArea.addEventListener('dragleave', () => DOM.pasteArea.classList.remove('drag-active'));
+                    DOM.pasteArea.addEventListener('drop', e => {
+                        DOM.pasteArea.classList.remove('drag-active');
+                        this.handleFiles(e.dataTransfer.files);
+                    });
+
+                    // Input e Paste
+                    DOM.pasteArea.addEventListener('click', () => DOM.fileInput.click());
+                    DOM.fileInput.addEventListener('change', e => this.handleFiles(e.target.files));
+                    document.addEventListener('paste', e => {
+                        const items = e.clipboardData.items;
+                        const files = [];
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type.indexOf('image') !== -1) {
+                                files.push(items[i].getAsFile());
+                            }
+                        }
+                        if (files.length) this.handleFiles(files);
+                    });
+
+                    // Rotação
+                    DOM.rotationSlider.addEventListener('input', e => {
+                        AppState.rotation.current = parseFloat(e.target.value);
+                        UI.updateRotationUI();
+                    });
+                    
+                    DOM.quickBtns.forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const angle = parseFloat(btn.dataset.angle);
+                            if (angle === 0) AppState.rotation.current = 0;
+                            else AppState.rotation.current += angle;
+                            
+                            // Clamp -180 a 180
+                            if (AppState.rotation.current > 180) AppState.rotation.current = 180;
+                            if (AppState.rotation.current < -180) AppState.rotation.current = -180;
+                            
+                            UI.updateRotationUI();
+                        });
+                    });
+
+                    DOM.confirmRotationBtn.addEventListener('click', async () => {
+                        UI.hideModal();
+                        const blob = await ImageProc.getRotatedBlob(AppState.rotation.current, AppState.rotation.originalData);
+                        this.processQueueItem(blob);
+                    });
+
+                    DOM.closeModalBtn.addEventListener('click', () => {
+                        UI.hideModal();
+                        AppState.extraction.queue = []; // Cancela fila
+                        UI.showProgress(false);
+                    });
+                    DOM.cancelRotationBtn.addEventListener('click', () => DOM.closeModalBtn.click());
+
+                    // Toolbar e Ações
+                    DOM.cleanJoinBtn.addEventListener('click', () => {
+                        const text = DOM.output.value;
+                        if (!text) return;
+                        // Limpeza inteligente: remove duplicatas de linhas e vazios
+                        const uniqueLines = [...new Set(text.split('\n').map(l => l.trim()).filter(l => l))];
+                        DOM.output.value = uniqueLines.join('\n');
+                        UI.updateCounters();
+                    });
+
+                    DOM.copyBtn.addEventListener('click', () => {
+                        navigator.clipboard.writeText(DOM.output.value).then(() => {
+                            const original = DOM.copyBtn.innerHTML;
+                            DOM.copyBtn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                            DOM.copyBtn.classList.replace('bg-indigo-600', 'bg-green-600');
+                            setTimeout(() => {
+                                DOM.copyBtn.innerHTML = original;
+                                DOM.copyBtn.classList.replace('bg-green-600', 'bg-indigo-600');
+                            }, 2000);
+                        });
+                    });
+
+                    DOM.clearBtn.addEventListener('click', () => {
+                        if(confirm('Tem certeza que deseja limpar tudo?')) {
+                            DOM.output.value = '';
+                            UI.updateCounters();
+                        }
+                    });
+
+                    DOM.downloadBtn.addEventListener('click', () => {
+                        const blob = new Blob([DOM.output.value], {type: 'text/plain'});
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = `extracao_${new Date().toISOString().slice(0,10)}.txt`;
+                        a.click();
+                    });
+
+                    // Filtros Inteligentes
+                    DOM.filterNumbersBtn.addEventListener('click', () => {
+                        DOM.output.value = Logic.filterNumbers(DOM.output.value);
+                        UI.updateCounters();
+                    });
+                    DOM.extractKeysBtn.addEventListener('click', () => {
+                        const keys = Logic.extractAccessKeys(DOM.output.value);
+                        if (!keys) alert('Nenhuma chave de acesso (44 dígitos) encontrada.');
+                        else DOM.output.value = keys;
+                        UI.updateCounters();
+                    });
+                    DOM.formatBtn.addEventListener('click', () => {
+                        DOM.output.value = Logic.formatSmart(DOM.output.value);
+                        UI.updateCounters();
+                    });
+
+                    // Links Helpers (Copia automático)
+                    DOM.linkHelpers.forEach(link => {
+                        link.addEventListener('click', (e) => {
+                            // Se tiver texto selecionado ou extraído, tenta copiar para área de transferência antes de abrir
+                            if (DOM.output.value) {
+                                // Tenta pegar o primeiro número válido
+                                const nums = DOM.output.value.match(/\d+/);
+                                if (nums) navigator.clipboard.writeText(nums[0]);
                             }
                         });
                     });
-                }
-            };
-            
-            const App = {
-                init() {
-                    Events.setup();
-                    UI.loadTheme();
-                    UI.setSignature();
-                    UI.renderHistory(Logic.getHistory());
-                    UI.updateCharCounter(); // inicializa estado dos botões
+
+                    // Evento Textarea
+                    DOM.output.addEventListener('input', () => UI.updateCounters());
+                    DOM.themeToggle.addEventListener('click', UI.toggleTheme);
+                },
+
+                handleFiles(files) {
+                    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+                    if (imageFiles.length === 0) return alert('Por favor, selecione apenas arquivos de imagem.');
+
+                    AppState.extraction.queue = imageFiles;
+                    AppState.extraction.totalFiles = imageFiles.length;
+                    AppState.extraction.processedFiles = 0;
+                    
+                    // Limpa output se for novo processamento e estiver vazio
+                    if (!DOM.output.value.trim()) DOM.output.value = '';
+
+                    this.processNextInQueue();
+                },
+
+                processNextInQueue() {
+                    if (AppState.extraction.queue.length === 0) {
+                        UI.showProgress(false);
+                        return;
+                    }
+
+                    const file = AppState.extraction.queue.shift();
+                    AppState.extraction.processedFiles++;
+                    
+                    UI.showProgress(true, `Preparando imagem ${AppState.extraction.processedFiles}/${AppState.extraction.totalFiles}...`);
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => UI.showModal(e.target.result);
+                    reader.readAsDataURL(file);
+                },
+
+                async processQueueItem(blob) {
+                    try {
+                        UI.showProgress(true, `Lendo dados... (${AppState.extraction.processedFiles}/${AppState.extraction.totalFiles})`);
+                        UI.updateProgress(10);
+                        
+                        const text = await Logic.processImage(blob);
+                        
+                        if (text.trim()) {
+                            UI.updateOutput(text, true); // Append
+                        } else {
+                            // Opcional: Avisar que nada foi encontrado nesta imagem específica
+                        }
+                    } catch (error) {
+                        console.error(error);
+                        alert('Erro ao processar imagem.');
+                    } finally {
+                        // Próximo
+                        this.processNextInQueue();
+                    }
                 }
             };
 
-            App.init();
+            // Start App
+            UI.init();
+            Controller.start();
         });
     </script>
 </body>
