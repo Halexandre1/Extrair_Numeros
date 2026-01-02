@@ -82,7 +82,7 @@
         </div>
 
         <div class="flex flex-wrap justify-center gap-3 mt-4">
-            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-broom mr-2"></i>Limpar e Unir</button>
+            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Mantém apenas números e classifica"><i class="fas fa-broom mr-2"></i>Limpar, Unir e Classificar</button>
             <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-copy mr-2"></i>Copiar</button>
             <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
         </div>
@@ -198,7 +198,6 @@
                     const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
                     DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
                     
-                    // Lógica de botões corrigida: habilita se tiver texto
                     const hasText = text.trim().length > 0;
                     DOM.copyBtn.disabled = !hasText;
                     DOM.cleanJoinBtn.disabled = !hasText;
@@ -224,7 +223,7 @@
                     DOM.output.value = '';
                     const ctx = DOM.preview.getContext('2d');
                     if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
-                    DOM.preview.style.display = 'none'; // Garante que começa oculto na limpeza total
+                    DOM.preview.style.display = 'none'; 
                     DOM.preview.classList.add('hidden');
                     this.hideStatus();
                     this.updateProgress(0);
@@ -257,7 +256,6 @@
                         await navigator.clipboard.writeText(text);
                         return true;
                     } catch (err) {
-                        // Fallback
                         const textArea = document.createElement("textarea");
                         textArea.value = text;
                         document.body.appendChild(textArea);
@@ -294,6 +292,15 @@
                         };
                         img.src = AppState.rotation.originalData;
                     });
+                },
+                classify(num) {
+                    const clean = num.replace(/\D/g, '');
+                    const len = clean.length;
+                    if (len === 47 || len === 48) return `[BOLETO] ${num}`;
+                    if (len === 44) return `[NFe] ${num}`;
+                    if (len === 14) return `[CNPJ] ${num}`;
+                    if (len === 11) return `[CPF] ${num}`;
+                    return num;
                 }
             };
 
@@ -334,7 +341,7 @@
 
             const Extractor = {
                 start(files) {
-                    AppState.extraction.queue = Array.from(files); // Cópia para não perder referência
+                    AppState.extraction.queue = Array.from(files);
                     AppState.extraction.totalFiles = files.length;
                     AppState.extraction.processedFiles = 0;
                     UI.clearAll();
@@ -357,13 +364,14 @@
                             const codeReader = new ZXing.BrowserMultiFormatReader();
                             const result = await codeReader.decodeFromImageUrl(preprocessedImage);
                             if (result?.getText()) {
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + result.getText();
+                                const text = result.getText();
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(text);
                                 resultFound = true;
                             }
                         } catch (err) {}
                         
                         // Tentar OCR (Tesseract)
-                        if (!resultFound) { // Se não achou barras, tenta texto
+                        if (!resultFound) { 
                             UI.showStatus(`🔍 Lendo texto... ${progressText}`, 'processing');
                             const worker = await Tesseract.createWorker({
                                 logger: m => {
@@ -372,15 +380,16 @@
                             });
                             await worker.loadLanguage('por');
                             await worker.initialize('por');
-                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' }); // Apenas números, como no original
+                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' }); 
                             
                             const { data } = await worker.recognize(preprocessedImage);
                             await worker.terminate();
 
-                            // Extrai apenas números
                             const numeros = data.text.match(/\d+/g);
                             if (numeros?.length > 0) {
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + [...new Set(numeros)].join('\n');
+                                const uniqueNumbers = [...new Set(numeros)];
+                                const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
                                 resultFound = true;
                             }
                         }
@@ -395,7 +404,7 @@
                     } finally {
                         URL.revokeObjectURL(imageURL);
                         UI.updateProgress(100);
-                        Rotator.showNext(); // Próxima imagem
+                        Rotator.showNext();
                     }
                 },
                 finalize() {
@@ -415,10 +424,10 @@
                             const ctx = canvas.getContext('2d');
                             canvas.width = img.width;
                             canvas.height = img.height;
-                            ctx.filter = 'grayscale(1) contrast(1.5)'; // Alto contraste para números
+                            ctx.filter = 'grayscale(1) contrast(1.5)';
                             ctx.drawImage(img, 0, 0);
                             
-                            // MODIFICAÇÃO: Torna a imagem visível para conferência
+                            // Mantém a imagem visível como conferência
                             canvas.classList.remove('hidden');
                             canvas.style.display = 'block';
 
@@ -449,13 +458,15 @@
                     DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); DOM.pasteArea.classList.remove('border-indigo-500'); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
                     DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
 
-                    // Lógica original de "Limpar e Unir" (apenas números, removendo espaços)
+                    // Lógica de "Limpar, Unir e Classificar"
                     DOM.cleanJoinBtn.addEventListener('click', () => {
                         const raw = DOM.output.value;
                         if (raw.trim()) {
                             const nums = raw.match(/\d+/g) || [];
                             const unique = [...new Set(nums)];
-                            DOM.output.value = unique.join('\n');
+                            // Aplica classificação ao limpar também
+                            const classified = unique.map(n => Logic.classify(n));
+                            DOM.output.value = classified.join('\n');
                             UI.updateCharCounter();
                             
                             const btn = DOM.cleanJoinBtn;
@@ -486,7 +497,7 @@
                          Rotator.update();
                     });
                     DOM.resetRotationBtn.addEventListener('click', () => { 
-                        if(DOM.resetRotationBtn.dataset.angle) Rotator.adjust(0); // Fix logic if using quick btns 
+                        if(DOM.resetRotationBtn.dataset.angle) Rotator.adjust(0); 
                         else Rotator.reset(); 
                     });
                     DOM.closeModalBtn.addEventListener('click', () => { Rotator.hide(); AppState.extraction.queue = []; });
