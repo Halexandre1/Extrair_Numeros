@@ -82,8 +82,8 @@
         </div>
 
         <div class="flex flex-wrap justify-center gap-3 mt-4">
-            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Mantém apenas números e classifica"><i class="fas fa-broom mr-2"></i>Limpar, Unir e Classificar</button>
-            <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-copy mr-2"></i>Copiar</button>
+            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Mantém apenas números e classifica"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
+            <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Copia APENAS os números (sem as etiquetas)"><i class="fas fa-copy mr-2"></i>Copiar Números</button>
             <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
         </div>
         
@@ -294,12 +294,20 @@
                     });
                 },
                 classify(num) {
+                    // Remove tudo que não é número para contar dígitos
                     const clean = num.replace(/\D/g, '');
                     const len = clean.length;
-                    if (len === 47 || len === 48) return `[BOLETO] ${num}`;
-                    if (len === 44) return `[NFe] ${num}`;
-                    if (len === 14) return `[CNPJ] ${num}`;
-                    if (len === 11) return `[CPF] ${num}`;
+                    let label = '';
+                    
+                    if (len === 47 || len === 48) label = 'BOLETO';
+                    else if (len === 44) label = 'NFe';
+                    else if (len === 14) label = 'CNPJ';
+                    else if (len === 11) label = 'CPF';
+                    
+                    if (label) {
+                        // Retorna com a etiqueta no FINAL para facilitar a cópia manual se necessário
+                        return `${num}   | ${label}`;
+                    }
                     return num;
                 }
             };
@@ -388,6 +396,7 @@
                             const numeros = data.text.match(/\d+/g);
                             if (numeros?.length > 0) {
                                 const uniqueNumbers = [...new Set(numeros)];
+                                // Aplica a classificação aqui
                                 const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
                                 DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
                                 resultFound = true;
@@ -458,13 +467,13 @@
                     DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); DOM.pasteArea.classList.remove('border-indigo-500'); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
                     DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
 
-                    // Lógica de "Limpar, Unir e Classificar"
+                    // Lógica de "Limpar e Classificar"
                     DOM.cleanJoinBtn.addEventListener('click', () => {
                         const raw = DOM.output.value;
                         if (raw.trim()) {
                             const nums = raw.match(/\d+/g) || [];
                             const unique = [...new Set(nums)];
-                            // Aplica classificação ao limpar também
+                            // Classifica ao limpar
                             const classified = unique.map(n => Logic.classify(n));
                             DOM.output.value = classified.join('\n');
                             UI.updateCharCounter();
@@ -476,8 +485,13 @@
                         }
                     });
 
+                    // Cópia Inteligente: Remove as etiquetas antes de copiar
                     DOM.copyBtn.addEventListener('click', async () => {
-                        const success = await Logic.copyToClipboard(DOM.output.value);
+                        const rawContent = DOM.output.value;
+                        // Regex: Remove pipe, espaços e a etiqueta (BOLETO, NFe...)
+                        const cleanContent = rawContent.replace(/\s+\|\s+(BOLETO|NFe|CNPJ|CPF)/g, '');
+                        
+                        const success = await Logic.copyToClipboard(cleanContent);
                         if(success) {
                             const btn = DOM.copyBtn;
                             const originalHTML = btn.innerHTML;
@@ -521,7 +535,9 @@
                             const el = e.currentTarget;
                             const pattern = el.dataset.pattern;
                             const text = DOM.output.value;
-                            const match = text.match(new RegExp(pattern));
+                            // Busca apenas números (ignora as etiquetas para a validação)
+                            const cleanText = text.replace(/\D/g, ''); 
+                            const match = cleanText.match(new RegExp(pattern));
                             
                             if (match) {
                                 window.open(el.href, '_blank');
