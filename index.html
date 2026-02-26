@@ -94,8 +94,17 @@
     .card-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
     .card-header h2{font-size:1.2rem;font-weight:700;color:var(--text-primary);text-transform:uppercase;letter-spacing:.05em;margin:0;}
     .card-header .icon{width:32px;height:32px;border-radius:var(--radius-sm);background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--border);}
+    
     .scanner-status{margin-left:auto;font-size:.8rem;font-weight:600;color:var(--accent);display:none;background:rgba(0,212,255,.1);padding:4px 10px;border-radius:20px;border:1px solid rgba(0,212,255,.2);animation:pulse 1.5s infinite;}
     @keyframes pulse{0%{opacity:.7;}50%{opacity:1;}100%{opacity:.7;}}
+
+    /* Botão de anexo */
+    .btn-attach {
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--accent);
+      font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;
+    }
+    .btn-attach:hover { background: var(--surface-3); border-color: var(--accent); color: var(--text-primary); }
 
     /* ==== TEXTAREA E CONTADOR ==== */
     .card textarea{
@@ -260,16 +269,23 @@
         <div class="digit-counter" id="counter-sienge">0 dígitos</div>
       </div>
 
-      <!-- Campo BOLETO (com OCR / PDF) -->
+      <!-- Campo BOLETO (com OCR / PDF / Anexo) -->
       <div class="card" id="card-boleto" role="region" aria-label="Campo Boleto">
         <div class="card-header">
           <div class="icon">🏦</div>
           <h2>BOLETO</h2>
+          
+          <!-- NOVO: Botão de Anexo para dispositivos/navegadores que bloqueiam colar ficheiros -->
+          <label for="file-upload" class="btn-attach" title="Procurar PDF ou Imagem no computador">
+            📎 Anexar
+          </label>
+          <input type="file" id="file-upload" accept="image/*, application/pdf" style="display:none;">
+          
           <div id="scanner-status" class="scanner-status" aria-live="polite">⏳ Lendo...</div>
         </div>
         <textarea id="inp-boleto"
           aria-label="Chave do boleto bancário"
-          placeholder="Cole texto, IMAGEM (Ctrl+V) ou arraste um PDF/imagem aqui..."></textarea>
+          placeholder="Cole o texto, IMAGEM (Ctrl+V), arraste um arquivo ou use o botão 'Anexar'..."></textarea>
         <div class="digit-counter" id="counter-boleto">0 dígitos</div>
       </div>
     </div>
@@ -385,17 +401,14 @@ let debounceTimer    = null;
 // ==== UTILITÁRIOS ====
 function normalizar(txt) { return txt.replace(/\D/g, ''); }
 
-// NOVO: Função Mágica de Formatação! Aplica os pontos e espaços da Febraban
 function formatarBoleto(txt) {
   const s = txt.replace(/\D/g, '');
   if (s.length === 47) {
-    // Boleto Bancário Padrão
     return s.replace(/^(\d{5})(\d{5})(\d{5})(\d{6})(\d{5})(\d{6})(\d)(\d{14})$/, '$1.$2 $3.$4 $5.$6 $7 $8');
   } else if (s.length === 48) {
-    // Convênios e Concessionárias
     return s.replace(/^(\d{11})(\d)(\d{11})(\d)(\d{11})(\d)(\d{11})(\d)$/, '$1-$2 $3-$4 $5-$6 $7-$8');
   }
-  return txt; // Se for um número estranho (46 ou 49), devolve como está para não quebrar.
+  return txt;
 }
 
 function showToast(msg, tipo = 'info', duracao = 3000) {
@@ -457,7 +470,7 @@ function modulo10(num) {
   return resto === 0 ? 0 : 10 - resto;
 }
 
-// ==== VALIDAÇÃO MÓDULO 11 (bancário) ====
+// ==== VALIDAÇÃO MÓDULO 11 ====
 function modulo11(num, base = 9) {
   let soma = 0, mult = 2;
   for (let i = num.length - 1; i >= 0; i--) {
@@ -469,9 +482,8 @@ function modulo11(num, base = 9) {
   return 11 - resto;
 }
 
-// ==== VALIDAÇÃO BOLETO BANCÁRIO (47 dígitos) ====
 function validarBoletoBancario(chave) {
-  if (chave.length !== 47) return { valido: false, msgs: ['Comprimento inválido para boleto bancário (esperado 47 dígitos).'] };
+  if (chave.length !== 47) return { valido: false, msgs: ['Comprimento inválido para boleto bancário.'] };
   const msgs = [];
   let valido = true;
 
@@ -506,9 +518,8 @@ function validarBoletoBancario(chave) {
   return { valido, msgs };
 }
 
-// ==== VALIDAÇÃO CONVÊNIO/CONCESSIONÁRIA (48 dígitos) ====
 function validarConvenio(chave) {
-  if (chave.length !== 48) return { valido: false, msgs: ['Comprimento inválido para convênio (esperado 48 dígitos).'] };
+  if (chave.length !== 48) return { valido: false, msgs: ['Comprimento inválido para convênio.'] };
   const msgs = [];
   let valido = true;
 
@@ -595,7 +606,6 @@ function gerarHTML(str, referencia, maxLen) {
   return html;
 }
 
-// ==== COPIAR CHAVE ====
 function copiarChave(tipo, btnEl) {
   const texto = tipo === 'sienge' ? chaveLimpaSienge : chaveLimpaBoleto;
   if (!texto) return;
@@ -604,15 +614,14 @@ function copiarChave(tipo, btnEl) {
     btnEl.innerHTML = '✔️ Copiado!';
     btnEl.style.color = 'var(--success)';
     btnEl.style.borderColor = 'var(--success)';
-    showToast('Chave copiada para a área de transferência!', 'success');
+    showToast('Chave copiada!', 'success');
     setTimeout(() => { btnEl.innerHTML = orig; btnEl.style.color = ''; btnEl.style.borderColor = ''; }, 2000);
   }).catch(e => {
-    console.warn('[copiarChave] Falha ao copiar:', e);
-    showToast('Falha ao copiar. Verifique as permissões do navegador.', 'error');
+    showToast('Falha ao copiar.', 'error');
   });
 }
 
-// ==== HISTÓRICO (localStorage) ====
+// ==== HISTÓRICO ====
 const HIST_KEY = 'comparador_historico';
 const HIST_MAX = 10;
 
@@ -638,16 +647,15 @@ function salvarEntradaHistorico(s, b, identicos) {
 function renderHistorico() {
   const hist = carregarHistorico();
   const lista = document.getElementById('historico-lista');
-  const countEl = document.getElementById('hist-count');
-  countEl.textContent = hist.length;
+  document.getElementById('hist-count').textContent = hist.length;
 
   if (hist.length === 0) {
     lista.innerHTML = '<div class="hist-empty">Nenhuma comparação no histórico.</div>';
     return;
   }
 
-  lista.innerHTML = hist.map((h, i) =>
-    `<div class="hist-item" role="listitem">
+  lista.innerHTML = hist.map((h) =>
+    `<div class="hist-item">
       <span class="${h.resultado === 'OK' ? 'hist-ok' : 'hist-diff'}">${h.resultado === 'OK' ? '✅ OK' : '❌ DIFERENTE'}</span>
       <span class="hist-data">${h.data}</span>
       <span class="hist-preview">S: ${h.sienge}… | B: ${h.boleto}…</span>
@@ -655,17 +663,14 @@ function renderHistorico() {
   ).join('');
 }
 
-const histToggle = document.getElementById('historico-toggle');
-histToggle.addEventListener('click', () => {
+document.getElementById('historico-toggle').addEventListener('click', function() {
   const lista = document.getElementById('historico-lista');
   const aberto = lista.classList.toggle('visible');
-  histToggle.classList.toggle('open', aberto);
-  histToggle.setAttribute('aria-expanded', aberto);
+  this.classList.toggle('open', aberto);
 });
-
 renderHistorico();
 
-// ==== FUNÇÃO PRINCIPAL: COMPARAR ====
+// ==== COMPARAÇÃO ====
 function comparar() {
   const rawS = document.getElementById('inp-sienge').value;
   const rawB = document.getElementById('inp-boleto').value;
@@ -673,7 +678,6 @@ function comparar() {
   chaveLimpaSienge = normalizar(rawS);
   chaveLimpaBoleto = normalizar(rawB);
 
-  // NOVO: Auto-formatar os campos de texto do utilizador, caso sejam boletos válidos
   if (chaveLimpaSienge.length === 47 || chaveLimpaSienge.length === 48) {
     document.getElementById('inp-sienge').value = formatarBoleto(chaveLimpaSienge);
   }
@@ -703,7 +707,6 @@ function comparar() {
   const identicos = chaveLimpaSienge === chaveLimpaBoleto;
   const tamDif    = chaveLimpaSienge.length !== chaveLimpaBoleto.length;
 
-  // NOVO: Gerar o HTML usando as strings já formatadas com pontos e espaços
   const visualSienge = formatarBoleto(chaveLimpaSienge) || rawS;
   const visualBoleto = formatarBoleto(chaveLimpaBoleto) || rawB;
   const maxLenVis = Math.max(visualSienge.length, visualBoleto.length);
@@ -772,17 +775,11 @@ function limpar() {
 }
 
 function exportarPDF() {
-  if (!ultimoResultado) { showToast('Realize uma comparação antes de exportar.', 'error'); return; }
-  if (typeof window.jspdf === 'undefined') {
-    showToast('Biblioteca jsPDF não carregada. Aguarde e tente novamente.', 'error');
-    return;
-  }
+  if (!ultimoResultado || typeof window.jspdf === 'undefined') return;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
   const r = ultimoResultado;
-  let y = 20;
-  const lm = 15;
-  const pw = 180;
+  let y = 20, lm = 15, pw = 180;
 
   const addLine = (txt, size = 10, bold = false, cor = [220,220,220]) => {
     doc.setFontSize(size);
@@ -795,58 +792,20 @@ function exportarPDF() {
 
   doc.setFillColor(10, 14, 26);
   doc.rect(0, 0, 210, 297, 'F');
-
   addLine('COMPARADOR PREMIUM DE BOLETOS', 18, true, [0, 212, 255]);
-  addLine('Relatório de Validação', 12, false, [168, 178, 209]);
-  y += 4;
-  addLine(`Data/Hora: ${r.data}`, 10, false, [107, 116, 148]);
-  y += 6;
+  addLine(`Data/Hora: ${r.data}`, 10, false, [107, 116, 148]); y += 6;
 
-  doc.setDrawColor(0, 212, 255, 80);
-  doc.line(lm, y, lm + pw, y); y += 8;
+  addLine(`SIENGE: ${formatarBoleto(r.sienge)}`, 10, false, [255,255,255]); y += 3;
+  addLine(`BOLETO: ${formatarBoleto(r.boleto)}`, 10, false, [255,255,255]); y += 6;
 
-  addLine('CHAVES COMPARADAS', 11, true, [0, 212, 255]);
-  addLine(`SIENGE (${r.sienge.length} dígitos | ${r.tipoS}):`, 9, false, [168,178,209]);
-  addLine(formatarBoleto(r.sienge) || '—', 8, false, [255,255,255]);
-  y += 3;
-  addLine(`BOLETO (${r.boleto.length} dígitos | ${r.tipoB}):`, 9, false, [168,178,209]);
-  addLine(formatarBoleto(r.boleto) || '—', 8, false, [255,255,255]);
-  y += 6;
-
-  doc.line(lm, y, lm + pw, y); y += 8;
   addLine('RESULTADO', 11, true, [0,212,255]);
   if (r.identicos) {
-    addLine('✅ CHAVES IDÊNTICAS – Nenhuma divergência encontrada.', 11, true, [0, 255, 136]);
+    addLine('✅ CHAVES IDÊNTICAS', 11, true, [0, 255, 136]);
   } else {
     addLine('❌ CHAVES DIFERENTES', 11, true, [255, 71, 87]);
-    addLine(`• Primeira divergência: posição ${r.primeiraDiv > 0 ? r.primeiraDiv : 'N/A'}`, 10, false, [255,170,0]);
-    addLine(`• Total de dígitos divergentes: ${r.totalDiv}`, 10, false, [255,170,0]);
-    if (r.tamDif) addLine('• Quantidades de dígitos diferentes!', 10, true, [255,71,87]);
   }
-  y += 6;
-
-  doc.line(lm, y, lm + pw, y); y += 8;
-  addLine('VALIDAÇÃO MATEMÁTICA (SIENGE)', 11, true, [0,212,255]);
-  if (r.validacaoSienge && r.validacaoSienge.msgs) {
-    r.validacaoSienge.msgs.forEach(m => {
-      if (typeof m === 'string') { addLine(`• ${m}`, 9, false, [255,71,87]); return; }
-      const cor = m.ok ? [0,255,136] : [255,71,87];
-      addLine(`${m.ok ? '✓' : '✗'} ${m.label} — ${m.detalhe}`, 9, false, cor);
-    });
-    addLine(r.validacaoSienge.valido ? '✅ Dígito Verificador VÁLIDO' : '❌ Dígito Verificador INVÁLIDO',
-      10, true, r.validacaoSienge.valido ? [0,255,136] : [255,71,87]);
-  } else {
-    addLine('Validação não disponível para este formato.', 9, false, [107,116,148]);
-  }
-
-  y += 8;
-  doc.setFontSize(8);
-  doc.setTextColor(107, 116, 148);
-  doc.text(`Feito por HAlexandre © ${new Date().getFullYear()} - OCR Premium Edition`, lm, 285);
-
-  const fname = `boleto_relatorio_${Date.now()}.pdf`;
-  doc.save(fname);
-  showToast('Relatório exportado com sucesso!', 'success');
+  
+  doc.save(`boleto_relatorio_${Date.now()}.pdf`);
 }
 
 function compararDebounced() {
@@ -854,124 +813,74 @@ function compararDebounced() {
   debounceTimer = setTimeout(comparar, 300);
 }
 
-document.getElementById('inp-sienge').addEventListener('input', () => {
-  atualizarContador('inp-sienge', 'counter-sienge');
-  compararDebounced();
-});
-document.getElementById('inp-boleto').addEventListener('input', () => {
-  atualizarContador('inp-boleto', 'counter-boleto');
-  compararDebounced();
-});
+document.getElementById('inp-sienge').addEventListener('input', () => { atualizarContador('inp-sienge', 'counter-sienge'); compararDebounced(); });
+document.getElementById('inp-boleto').addEventListener('input', () => { atualizarContador('inp-boleto', 'counter-boleto'); compararDebounced(); });
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { limpar(); showToast('Campos limpos (Esc)', 'info'); }
-  if (e.ctrlKey && e.key === 'Enter') {
-    comparar();
-    const card = document.getElementById('resultado-card');
-    if (card.style.display === 'block') card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
+  if (e.key === 'Escape') limpar(); 
+  if (e.ctrlKey && e.key === 'Enter') { comparar(); document.getElementById('resultado-card').scrollIntoView(); }
 });
 
-// ==== MÓDULO DE ROTAÇÃO DA IMAGEM ====
+// ==== ROTAÇÃO E SCANNER ====
 const rotationState = { current: 0, objectURL: null };
 
 const Rotator = {
-  dom: {
-    modal:        document.getElementById('rotation-modal'),
-    img:          document.getElementById('rotatable-image'),
-    slider:       document.getElementById('rotation-slider'),
-    angleDisplay: document.getElementById('angle-display'),
-    quickBtns:    document.querySelectorAll('.btn-quick'),
-    btnConfirm:   document.getElementById('btn-confirm-rotation'),
-    btnCancel:    document.getElementById('btn-cancel-rotation'),
-    btnClose:     document.getElementById('btn-close-modal')
-  },
+  dom: { modal: document.getElementById('rotation-modal'), img: document.getElementById('rotatable-image'), slider: document.getElementById('rotation-slider'), angleDisplay: document.getElementById('angle-display'), quickBtns: document.querySelectorAll('.btn-quick'), btnConfirm: document.getElementById('btn-confirm-rotation'), btnCancel: document.getElementById('btn-cancel-rotation'), btnClose: document.getElementById('btn-close-modal') },
   init() {
     this.dom.slider.addEventListener('input', e => this.setAngle(parseFloat(e.target.value)));
-    this.dom.quickBtns.forEach(btn => {
-      btn.addEventListener('click', e => {
-        const a = parseFloat(e.currentTarget.dataset.angle);
-        this.setAngle(a === 0 ? 0 : rotationState.current + a);
-      });
-    });
+    this.dom.quickBtns.forEach(btn => btn.addEventListener('click', e => this.setAngle(parseFloat(e.target.dataset.angle) === 0 ? 0 : rotationState.current + parseFloat(e.target.dataset.angle))));
     this.dom.btnCancel.addEventListener('click', () => this.hide());
-    this.dom.btnClose.addEventListener('click',  () => this.hide());
-
+    this.dom.btnClose.addEventListener('click', () => this.hide());
     this.dom.btnConfirm.addEventListener('click', async () => {
-      const orig = this.dom.btnConfirm.innerHTML;
-      this.dom.btnConfirm.innerHTML = '⏳ Processando...';
       this.dom.btnConfirm.disabled = true;
       try {
         const blob = await this.getRotatedBlob();
         this.hide();
         Scanner.processImage(blob, document.getElementById('inp-boleto'));
-      } catch (err) {
-        showToast('Erro ao processar a imagem. Tente novamente.', 'error');
-        this.hide();
-      } finally {
-        this.dom.btnConfirm.innerHTML = orig;
-        this.dom.btnConfirm.disabled = false;
-      }
+      } catch(e) {} finally { this.dom.btnConfirm.disabled = false; }
     });
   },
   open(file) {
-    if (rotationState.objectURL) { URL.revokeObjectURL(rotationState.objectURL); rotationState.objectURL = null; }
-    const url = URL.createObjectURL(file);
-    rotationState.objectURL = url;
-    this.dom.img.src = url;
+    if (rotationState.objectURL) URL.revokeObjectURL(rotationState.objectURL);
+    rotationState.objectURL = URL.createObjectURL(file);
+    this.dom.img.src = rotationState.objectURL;
     this.setAngle(0);
     this.dom.modal.classList.add('active');
   },
   hide() {
     this.dom.modal.classList.remove('active');
-    if (rotationState.objectURL) { URL.revokeObjectURL(rotationState.objectURL); rotationState.objectURL = null; }
-    this.dom.img.src = '';
   },
   setAngle(angle) {
-    angle = Math.max(-180, Math.min(180, angle));
     rotationState.current = angle;
-    this.dom.slider.value  = angle;
+    this.dom.slider.value = angle;
     this.dom.img.style.transform = `rotate(${angle}deg)`;
     this.dom.angleDisplay.textContent = `${angle.toFixed(1)}°`;
   },
   getRotatedBlob() {
-    return new Promise((resolve, reject) => {
-      const canvas = document.createElement('canvas');
-      const ctx    = canvas.getContext('2d');
-      const img    = new Image();
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), img = new Image();
       img.onload = () => {
-        const rad = (rotationState.current * Math.PI) / 180;
-        const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
-        canvas.width  = img.width * cos + img.height * sin;
-        canvas.height = img.width * sin + img.height * cos;
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(rad);
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
-        canvas.toBlob(blob => {
-          if (blob) resolve(blob);
-          else reject(new Error('canvas.toBlob retornou null'));
-        }, 'image/png');
+        const rad = (rotationState.current * Math.PI)/180, sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
+        canvas.width = img.width * cos + img.height * sin; canvas.height = img.width * sin + img.height * cos;
+        ctx.translate(canvas.width/2, canvas.height/2); ctx.rotate(rad); ctx.drawImage(img, -img.width/2, -img.height/2);
+        canvas.toBlob(blob => resolve(blob), 'image/png');
       };
-      img.onerror = () => reject(new Error('Erro ao carregar imagem para rotação.'));
       img.src = rotationState.objectURL;
     });
   }
 };
 Rotator.init();
 
-// ==== MÓDULO DE LEITURA PDF (pdf.js) ====
 const PDFReader = {
   async extract(file) {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!window.pdfjsLib) {
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
         script.onload = () => {
-          pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           this._doExtract(file).then(resolve).catch(reject);
         };
-        script.onerror = () => reject(new Error('Falha ao carregar pdf.js'));
         document.head.appendChild(script);
       } else {
         this._doExtract(file).then(resolve).catch(reject);
@@ -980,177 +889,142 @@ const PDFReader = {
   },
   async _doExtract(file) {
     const arrayBuffer = await file.arrayBuffer();
-    const pdf  = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let fullText = '';
     for (let p = 1; p <= pdf.numPages; p++) {
-      const page    = await pdf.getPage(p);
-      const content = await page.getTextContent();
+      const page = await pdf.getPage(p), content = await page.getTextContent();
       fullText += content.items.map(i => i.str).join(' ') + '\n';
     }
     return fullText;
   }
 };
 
-// ==== MÓDULO DO EXTRATOR OCR / PDF ====
 const Scanner = {
   async processImage(blobOrFile, targetInput) {
     const statusEl = document.getElementById('scanner-status');
-    const origPH   = targetInput.placeholder;
-    statusEl.style.display = 'block';
-    targetInput.disabled = true;
-    targetInput.value    = '';
-    targetInput.placeholder = '⏳ Processando...';
-
+    targetInput.disabled = true; statusEl.style.display = 'block';
+    
     try {
-      // ==== 1. TENTA EXTRAIR PDF NATIVO PRIMEIRO ====
       if (blobOrFile.type === 'application/pdf') {
-        statusEl.innerText = '📄 Extraindo texto do PDF...';
         try {
           const texto = await PDFReader.extract(blobOrFile);
           const linhaDigitavel = extrairLinhaDigitavel(texto);
           if (linhaDigitavel) {
-            // NOVO: Aplica a formatação na resposta do PDF
             targetInput.value = formatarBoleto(linhaDigitavel);
             statusEl.innerText = '✅ PDF Extraído!';
-            statusEl.style.color = 'var(--success)';
-            setTimeout(comparar, 100);
-            return; 
-          } else {
-            throw new Error('Sem linha digitável no texto.');
-          }
+            setTimeout(comparar, 100); return; 
+          } else throw new Error();
         } catch (pdfErr) {
-          showToast('Não foi possível extrair a linha do arquivo PDF.', 'error');
-          statusEl.innerText = '❌ Falha no PDF';
-          statusEl.style.color = 'var(--error)';
-          return; 
+          showToast('Falha ao ler texto do PDF.', 'error');
+          return;
         }
       }
 
-      // ==== 2. INÍCIO DA ROTA DE IMAGENS ====
-      let extractedText = '';
-      let resultFound   = false;
-
+      let extractedText = '', resultFound = false;
       const objectURL = URL.createObjectURL(blobOrFile);
       const preprocessed = await this.preprocessImage(objectURL);
-      URL.revokeObjectURL(objectURL); 
-
-      // Tenta Código de Barras
-      statusEl.innerText = '🔍 Procurando código de barras...';
+      
       try {
         const codeReader = new ZXing.BrowserMultiFormatReader();
         const result = await codeReader.decodeFromImageUrl(preprocessed);
-        if (result && result.getText()) {
-          extractedText = result.getText();
-          resultFound   = true;
-        }
-      } catch (zbErr) {}
+        if (result && result.getText()) { extractedText = result.getText(); resultFound = true; }
+      } catch (e) {}
 
-      // Tenta OCR se barra falhar
       if (!resultFound) {
-        statusEl.innerText = '👁️ OCR (0%)...';
-        let worker;
-        try {
-          worker = await Tesseract.createWorker('por', 1, {
-            logger: m => {
-              if (m.status === 'recognizing text') {
-                const pct = Math.round(m.progress * 100);
-                statusEl.innerText = `👁️ OCR (${pct}%)...`;
-              }
-            }
-          });
-          await worker.setParameters({ tessedit_char_whitelist: '0123456789 .' });
-          const { data } = await worker.recognize(preprocessed);
-          await worker.terminate();
-
-          const linhaOCR = extrairLinhaDigitavel(data.text);
-          if (linhaOCR) {
-            extractedText = linhaOCR;
-          } else {
-            const nums = data.text.match(/\d+/g);
-            if (nums && nums.length > 0) extractedText = nums.join('');
-          }
-          if (extractedText) resultFound = true;
-        } catch (tessErr) {
-          throw new Error('OCR falhou.');
+        statusEl.innerText = '👁️ OCR...';
+        const worker = await Tesseract.createWorker('por', 1);
+        await worker.setParameters({ tessedit_char_whitelist: '0123456789 .' });
+        const { data } = await worker.recognize(preprocessed);
+        await worker.terminate();
+        const linhaOCR = extrairLinhaDigitavel(data.text);
+        if (linhaOCR) { extractedText = linhaOCR; resultFound = true; }
+        else {
+           const nums = data.text.match(/\d+/g);
+           if (nums && nums.length > 0) { extractedText = nums.join(''); resultFound = true; }
         }
       }
 
-      // ==== FINALIZAÇÃO IMAGENS ====
       if (resultFound && extractedText) {
-        // NOVO: Aplica a formatação na resposta do OCR
         targetInput.value = formatarBoleto(extractedText);
         statusEl.innerText = '✅ Concluído!';
-        statusEl.style.color = 'var(--success)';
         setTimeout(comparar, 100);
-      } else {
-        targetInput.value = '';
-        showToast('Nenhum número válido encontrado na imagem.', 'error');
-        statusEl.innerText = '❌ Falha';
-        statusEl.style.color = 'var(--error)';
-      }
-    } catch (error) {
-      targetInput.value = '';
-      showToast('Erro grave no processamento. Formato incompatível.', 'error');
-      statusEl.innerText = '❌ Erro';
-      statusEl.style.color = 'var(--error)';
+      } else showToast('Nenhum número válido encontrado.', 'error');
+      
+    } catch (e) {
+      showToast('Erro no processamento.', 'error');
     } finally {
-      targetInput.disabled = false;
-      targetInput.placeholder = origPH;
-      setTimeout(() => {
-        statusEl.style.display = 'none';
-        statusEl.innerText = '⏳ Lendo...';
-        statusEl.style.color = 'var(--accent)';
-        targetInput.focus();
-      }, 4000);
+      targetInput.disabled = false; setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
     }
   },
 
   preprocessImage(src) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width  = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.filter = 'grayscale(1) contrast(1.6)';
-        ctx.drawImage(img, 0, 0);
+        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
+        canvas.width = img.width; canvas.height = img.height;
+        ctx.filter = 'grayscale(1) contrast(1.6)'; ctx.drawImage(img, 0, 0);
         resolve(canvas.toDataURL('image/png'));
       };
-      img.onerror = () => reject(new Error('A imagem ou arquivo não pode ser processada neste formato.'));
       img.src = src;
     });
   },
 
   setupListeners() {
     const inp = document.getElementById('inp-boleto');
+    const fileUpload = document.getElementById('file-upload');
 
+    // Auxiliar centralizado para processar os arquivos
+    const handleFile = (file) => {
+      if (!file) return;
+      if (file.type.startsWith('image/')) Rotator.open(file);
+      else if (file.type === 'application/pdf') this.processImage(file, inp);
+      else showToast('Formato não suportado. Use PDF ou Imagem.', 'error');
+    };
+
+    // Nova Lógica: Input File Explícito (O Botão "Anexar")
+    fileUpload.addEventListener('change', e => {
+      handleFile(e.target.files[0]);
+      e.target.value = ''; // Reset
+    });
+
+    // Nova Lógica: Colar mais robusta para SO e Browser
     inp.addEventListener('paste', e => {
-      const imgItem = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
-      if (imgItem) {
-        e.preventDefault();
-        const file = imgItem.getAsFile();
-        if (file) Rotator.open(file);
+      // 1º Tentativa: Ler a lista real de ficheiros (Quando copiamos no Windows Explorer / Finder Mac)
+      const files = e.clipboardData?.files;
+      if (files && files.length > 0) {
+        const file = Array.from(files).find(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+        if (file) {
+          e.preventDefault();
+          handleFile(file);
+          return;
+        }
       }
       
-      const pdfItem = [...(e.clipboardData?.items || [])].find(i => i.type === 'application/pdf');
-      if (pdfItem) {
-        e.preventDefault();
-        const file = pdfItem.getAsFile();
-        if (file) this.processImage(file, inp);
+      // 2º Tentativa: Fallback para Itens (Normalmente útil para PrintScreen / Snip & Sketch)
+      const items = e.clipboardData?.items;
+      if (items && items.length > 0) {
+        const item = Array.from(items).find(i => i.type.startsWith('image/') || i.type === 'application/pdf');
+        if (item) {
+          const file = item.getAsFile();
+          if (file) {
+             e.preventDefault();
+             handleFile(file);
+          }
+        }
       }
     });
 
+    // Drag & Drop
     inp.addEventListener('dragover',  e => { e.preventDefault(); inp.classList.add('dragover'); });
     inp.addEventListener('dragleave', e => { e.preventDefault(); inp.classList.remove('dragover'); });
     inp.addEventListener('drop', e => {
       e.preventDefault();
       inp.classList.remove('dragover');
-      const files = [...(e.dataTransfer?.files || [])];
-      const imgFile = files.find(f => f.type.startsWith('image/'));
-      const pdfFile = files.find(f => f.type === 'application/pdf');
-      if (imgFile) Rotator.open(imgFile);
-      else if (pdfFile) this.processImage(pdfFile, inp);
+      if (e.dataTransfer?.files?.length > 0) {
+        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/') || f.type === 'application/pdf');
+        handleFile(file);
+      }
     });
   }
 };
