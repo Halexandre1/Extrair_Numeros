@@ -1,1035 +1,1125 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+
+<html lang="pt-BR" class="">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comparador Premium de Boletos – OCR Edition</title>
 
-  <!-- Fontes -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta charset="UTF-8" />
 
-  <!-- ==== CDNs das Bibliotecas ==== -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <!-- pdf.js carregado dinamicamente no módulo PDF para controle do worker -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    /* ==== VARIÁVEIS E TEMAS ==== */
-    :root {
-      --bg-primary:#0a0e1a; --bg-secondary:#0f1419; --bg-tertiary:#151b26;
-      --surface-1:rgba(255,255,255,.02); --surface-2:rgba(255,255,255,.04); --surface-3:rgba(255,255,255,.06);
-      --text-primary:#fff; --text-secondary:#a8b2d1; --text-muted:#6b7494;
-      --accent:#00d4ff; --accent-glow:rgba(0,212,255,.3);
-      --success:#00ff88; --warning:#ffaa00; --error:#ff4757;
-      --border:rgba(255,255,255,.1); --border-focus:rgba(0,212,255,.4);
-      --shadow-sm:0 2px 8px rgba(0,0,0,.1); --shadow-md:0 8px 25px rgba(0,0,0,.15); --shadow-lg:0 15px 35px rgba(0,0,0,.2);
-      --shadow-accent:0 8px 25px var(--accent-glow);
-      --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-xl:24px;
-    }
-    /* Modo Claro */
-    body.light-mode {
-      --bg-primary:#f0f4f8; --bg-secondary:#e4eaf2; --bg-tertiary:#d8e2ee;
-      --surface-1:rgba(0,0,0,.02); --surface-2:rgba(0,0,0,.04); --surface-3:rgba(0,0,0,.07);
-      --text-primary:#0a0e1a; --text-secondary:#3a4a6b; --text-muted:#8896b3;
-      --border:rgba(0,0,0,.12); --border-focus:rgba(0,150,200,.5);
-    }
-    body.light-mode .footer { background:#e4eaf2; }
-    body.light-mode .card textarea { color:var(--text-primary); }
+    <title>Extrator e Editor PRO | HAlexandre</title>
 
-    /* ==== RESET ==== */
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-    html{scroll-behavior:smooth;}
-    body{
-      font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-      background:linear-gradient(135deg,var(--bg-primary) 0%,var(--bg-secondary) 50%,var(--bg-tertiary) 100%);
-      color:var(--text-primary);line-height:1.6;min-height:100vh;overflow-x:hidden;
-      display:flex;flex-direction:column;
-    }
-    body::before{
-      content:'';position:fixed;top:0;left:0;width:100%;height:100%;
-      background:radial-gradient(circle at 20% 50%,rgba(0,212,255,.05) 0%,transparent 50%),
-                 radial-gradient(circle at 80% 20%,rgba(0,255,136,.05) 0%,transparent 50%),
-                 radial-gradient(circle at 40% 80%,rgba(255,170,0,.05) 0%,transparent 50%);
-      pointer-events:none;z-index:-1;animation:float 20s ease-in-out infinite;
-    }
-    @keyframes float{0%,100%{transform:translateY(0) rotate(0deg);}50%{transform:translateY(-20px) rotate(5deg);}}
+    <meta name="description" content="Ferramenta de OCR e extração de códigos de barras. Cole imagens, rotacione e limpe os dados automaticamente.">
 
-    .container{max-width:1200px;margin:0 auto;padding:2rem;position:relative;z-index:1;flex:1;width:100%;}
+    <meta name="author" content="HAlexandre">
 
-    /* ==== CABEÇALHO ==== */
-    .header{display:flex;align-items:center;gap:1.5rem;margin-bottom:3rem;padding:1.5rem 0;justify-content:center;}
-    @media(max-width:620px){.header{flex-direction:column;text-align:center;}}
-    .logo{width:64px;height:64px;border-radius:var(--radius-lg);box-shadow:var(--shadow-accent),inset 0 1px 0 rgba(255,255,255,.2);position:relative;overflow:hidden;flex-shrink:0;}
-    .logo img{width:100%;height:100%;object-fit:cover;}
-    .header-content h1{
-      font-size:clamp(1.8rem,4vw,2.5rem);font-weight:800;
-      background:linear-gradient(135deg,var(--text-primary),var(--accent));
-      -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-      margin-bottom:.5rem;letter-spacing:-.02em;
-    }
-    .header-content p{color:var(--text-secondary);font-size:1.1rem;max-width:600px;font-weight:400;}
-    .tip-realtime{font-weight:600;color:var(--accent);}
+    <meta name="theme-color" content="#4f46e5">
 
-    /* Toggle tema */
-    .theme-toggle{
-      margin-left:auto;background:var(--surface-2);border:1px solid var(--border);
-      color:var(--text-primary);width:40px;height:40px;border-radius:50%;cursor:pointer;
-      display:flex;align-items:center;justify-content:center;font-size:1.2rem;
-      transition:all .2s;flex-shrink:0;
-    }
-    .theme-toggle:hover{background:var(--accent);color:#000;transform:scale(1.1);}
 
-    /* ==== LAYOUT E CARDS ==== */
-    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2rem;}
-    @media(max-width:768px){.input-grid{grid-template-columns:1fr;}}
-    .card{
-      background:linear-gradient(135deg,var(--surface-1) 0%,var(--surface-2) 100%);
-      border:1px solid var(--border);border-radius:var(--radius-xl);padding:2rem;
-      box-shadow:var(--shadow-lg);backdrop-filter:blur(10px);position:relative;overflow:hidden;transition:all .3s ease;
-    }
-    .card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg),0 0 40px rgba(0,212,255,.05);border-color:var(--border-focus);}
-    .card-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:1px solid var(--border);}
-    .card-header h2{font-size:1.2rem;font-weight:700;color:var(--text-primary);text-transform:uppercase;letter-spacing:.05em;margin:0;}
-    .card-header .icon{width:32px;height:32px;border-radius:var(--radius-sm);background:var(--surface-3);display:flex;align-items:center;justify-content:center;font-size:16px;border:1px solid var(--border);}
+
+    <!-- Favicon -->
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+
+
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
+
     
-    .scanner-status{margin-left:auto;font-size:.8rem;font-weight:600;color:var(--accent);display:none;background:rgba(0,212,255,.1);padding:4px 10px;border-radius:20px;border:1px solid rgba(0,212,255,.2);animation:pulse 1.5s infinite;}
-    @keyframes pulse{0%{opacity:.7;}50%{opacity:1;}100%{opacity:.7;}}
 
-    /* Botão de anexo */
-    .btn-attach {
-      background: var(--surface-2); border: 1px solid var(--border); color: var(--accent);
-      font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: var(--radius-sm);
-      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px;
-    }
-    .btn-attach:hover { background: var(--surface-3); border-color: var(--accent); color: var(--text-primary); }
+    <script>
 
-    /* ==== TEXTAREA E CONTADOR ==== */
-    .card textarea{
-      width:100%;height:120px;border:1px solid var(--border);border-radius:var(--radius-md);
-      padding:1rem 1.25rem;font-size:1.05rem;font-family:'Courier New',Courier,monospace;
-      color:var(--text-primary);background-color:var(--surface-2);resize:vertical;
-      transition:all .3s ease;backdrop-filter:blur(5px);outline:none;
-      letter-spacing: 1px;
-    }
-    .card textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,212,255,.1),var(--shadow-md);background:var(--surface-3);}
-    .card textarea::placeholder{color:var(--text-muted); letter-spacing: normal;}
-    .card textarea.dragover{border-color:var(--accent);background:rgba(0,212,255,.05);box-shadow:inset 0 0 20px rgba(0,212,255,.1);}
-    .card textarea:disabled{opacity:.7;cursor:wait;}
+        tailwind.config = {
 
-    .digit-counter{
-      font-size:.8rem;font-weight:600;margin-top:.5rem;text-align:right;
-      color:var(--text-muted);transition:color .2s;
-    }
-    .digit-counter.ok{color:var(--success);}
-    .digit-counter.warn{color:var(--error);}
+            darkMode: 'class',
 
-    /* ==== BARRA DE AÇÕES ==== */
-    .action-bar{display:flex;justify-content:center;gap:1rem;flex-wrap:wrap;margin-bottom:.5rem;}
-    .btn{padding:1rem 2rem;border:none;border-radius:var(--radius-md);font-size:1rem;font-weight:600;cursor:pointer;transition:all .3s ease;display:flex;align-items:center;justify-content:center;gap:.5rem;text-transform:uppercase;letter-spacing:.05em;}
-    .btn:disabled{opacity:.6;cursor:not-allowed;}
-    .btn-primary{background:linear-gradient(135deg,var(--accent),#0099cc);color:#000;box-shadow:var(--shadow-accent);}
-    .btn-primary:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,212,255,.4);}
-    .btn-primary:not(:disabled):active{transform:translateY(0);}
-    .btn-secondary{background:var(--surface-2);color:var(--text-primary);border:1px solid var(--border);}
-    .btn-secondary:not(:disabled):hover{background:var(--surface-3);border-color:var(--accent);transform:translateY(-1px);}
-    .btn-export{background:linear-gradient(135deg,#7b2ff7,#5b00d4);color:#fff;border:none;}
-    .btn-export:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(123,47,247,.4);}
+            theme: {
 
-    .tip{font-size:.85rem;color:var(--text-muted);text-align:center;margin-bottom:2rem;}
-    kbd{background:var(--surface-3);padding:.2rem .5rem;border-radius:4px;border:1px solid var(--border);font-family:monospace;}
+                extend: {
 
-    /* ==== CARD DE RESULTADO ==== */
-    #resultado-card{display:none;margin-top:2rem;}
-    .secao-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;margin-top:2rem;}
-    .secao-header:first-child{margin-top:0;}
-    .secao-titulo{font-size:.85rem;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text-secondary);margin:0;}
-    .btn-icon-copy{background:var(--surface-2);border:1px solid var(--border);cursor:pointer;color:var(--accent);font-size:.8rem;font-weight:600;display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);transition:all .2s;}
-    .btn-icon-copy:hover{background:var(--surface-3);border-color:var(--accent);color:var(--text-primary);}
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
 
-    .digits-display{font-family:'Courier New',Courier,monospace;font-size:1.2rem;font-weight:500;background:var(--surface-1);border:1px solid var(--border);border-radius:var(--radius-md);padding:1.5rem;word-break:break-all;line-height:2;letter-spacing:2px;min-height:80px;box-shadow:inset 0 2px 10px rgba(0,0,0,.2);}
-    .digit-diff{background-color:rgba(255,71,87,.2);color:var(--error);font-weight:800;border-radius:4px;padding:2px 4px;border:1px solid rgba(255,71,87,.3);}
-    .digit-pad{color:var(--text-muted);opacity:.5;background:none;border:1px dashed var(--border);}
+                    colors: { brand: { 500: '#6366f1', 600: '#4f46e5' } }
 
-    .status-badge{display:inline-flex;align-items:center;gap:10px;padding:1rem 1.5rem;border-radius:var(--radius-md);font-size:1.1rem;font-weight:700;width:100%;justify-content:center;}
-    .status-ok{background:rgba(0,255,136,.1);color:var(--success);border:1px solid rgba(0,255,136,.3);}
-    .status-diff{background:rgba(255,71,87,.1);color:var(--error);border:1px solid rgba(255,71,87,.3);}
+                }
 
-    /* Badge de validação do dígito verificador */
-    .validacao-box{
-      background:var(--surface-1);border:1px solid var(--border);
-      border-radius:var(--radius-md);padding:1.25rem;margin-top:1rem;
-    }
-    .validacao-item{display:flex;align-items:center;gap:.75rem;font-size:.95rem;padding:.4rem 0;}
-    .validacao-ok{color:var(--success);}
-    .validacao-err{color:var(--error);}
-    .validacao-warn{color:var(--warning);}
+            }
 
-    .tipo-badge{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:4px 12px;border-radius:20px;font-size:.78rem;font-weight:700;
-      background:rgba(0,212,255,.1);color:var(--accent);border:1px solid rgba(0,212,255,.25);
-      margin-left:.75rem;vertical-align:middle;
-    }
+        }
 
-    .analise-box{background:var(--surface-1);border-left:4px solid var(--accent);padding:1.5rem;border-radius:0 var(--radius-md) var(--radius-md) 0;font-size:1rem;color:var(--text-primary);line-height:1.8;border:1px solid var(--border);border-left-width:4px;}
-    .analise-box.alerta{border-left-color:var(--warning);background:linear-gradient(90deg,rgba(255,170,0,.05) 0%,transparent 100%);}
-    .analise-box ul{margin:10px 0 0 24px;color:var(--text-secondary);}
-    .analise-box li{margin-bottom:5px;}
-    .analise-box strong{color:var(--text-primary);}
-    .divider{border:none;border-top:1px solid var(--border);margin:2rem 0;opacity:.5;}
+    </script>
 
-    /* ==== HISTÓRICO ==== */
-    .historico-section{margin-top:2rem;}
-    .historico-toggle{
-      display:flex;align-items:center;gap:.75rem;cursor:pointer;
-      background:var(--surface-1);border:1px solid var(--border);
-      border-radius:var(--radius-md);padding:1rem 1.5rem;font-weight:600;
-      color:var(--text-secondary);transition:all .2s;
-    }
-    .historico-toggle:hover{background:var(--surface-2);color:var(--text-primary);}
-    .historico-toggle .arrow{transition:transform .3s;font-size:1rem;}
-    .historico-toggle.open .arrow{transform:rotate(180deg);}
-    .historico-lista{display:none;margin-top:.75rem;display:flex;flex-direction:column;gap:.5rem;}
-    .historico-lista.visible{display:flex;}
-    .hist-item{
-      background:var(--surface-1);border:1px solid var(--border);
-      border-radius:var(--radius-md);padding:.85rem 1.25rem;
-      display:flex;align-items:center;gap:1rem;font-size:.85rem;
-      cursor:default;transition:background .2s;
-    }
-    .hist-item:hover{background:var(--surface-2);}
-    .hist-ok{color:var(--success);font-weight:700;min-width:80px;}
-    .hist-diff{color:var(--error);font-weight:700;min-width:80px;}
-    .hist-data{color:var(--text-muted);min-width:140px;}
-    .hist-preview{font-family:'Courier New',monospace;font-size:.8rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-    .hist-empty{color:var(--text-muted);font-style:italic;padding:.75rem 0;text-align:center;}
+    <style>
 
-    /* ==== MODAL DE ROTAÇÃO ==== */
-    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;transition:opacity .3s ease;}
-    .modal-overlay.active{display:flex;opacity:1;}
-    .modal-content{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius-xl);padding:2.5rem;width:95%;max-width:700px;box-shadow:var(--shadow-lg);position:relative;}
-    .modal-close{position:absolute;top:1.5rem;right:1.5rem;background:var(--surface-3);border:none;color:var(--text-primary);width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .2s;}
-    .modal-close:hover{background:var(--accent);color:#000;transform:scale(1.1);}
-    .rotation-preview{background:var(--bg-primary);border:1px solid var(--border);border-radius:var(--radius-md);padding:1rem;height:35vh;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:2rem;box-shadow:inset 0 2px 10px rgba(0,0,0,.3);}
-    .rotation-preview img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .1s linear;border-radius:4px;}
-    .rotation-slider{width:100%;-webkit-appearance:none;background:var(--surface-3);height:8px;border-radius:4px;outline:none;margin:1rem 0 2rem;border:1px solid var(--border);}
-    .rotation-slider::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--accent),#0099cc);cursor:pointer;box-shadow:0 0 10px var(--accent-glow);}
-    .quick-controls{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:2rem;}
-    .btn-quick{background:var(--surface-2);border:1px solid var(--border);color:var(--text-primary);font-weight:600;padding:.5rem 1rem;border-radius:var(--radius-sm);font-size:.9rem;cursor:pointer;transition:all .2s;}
-    .btn-quick:hover{background:var(--accent);color:#000;border-color:var(--accent);transform:translateY(-2px);}
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-    /* ==== TOAST / NOTIFICAÇÃO ==== */
-    .toast{
-      position:fixed;bottom:2rem;right:2rem;background:var(--bg-secondary);
-      border:1px solid var(--border);border-radius:var(--radius-md);
-      padding:.85rem 1.5rem;font-size:.9rem;font-weight:600;
-      box-shadow:var(--shadow-lg);z-index:2000;opacity:0;
-      transform:translateY(20px);transition:all .3s ease;pointer-events:none;
-    }
-    .toast.show{opacity:1;transform:translateY(0);}
-    .toast.success{border-left:4px solid var(--success);color:var(--success);}
-    .toast.error{border-left:4px solid var(--error);color:var(--error);}
-    .toast.info{border-left:4px solid var(--accent);color:var(--accent);}
+        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
 
-    /* ==== RODAPÉ ==== */
-    .footer{padding:2rem;border-top:1px solid var(--border);color:var(--text-muted);font-size:.9rem;text-align:center;margin-top:auto;width:100%;background:var(--bg-primary);z-index:1;}
-  </style>
+        .progress-fill { transition: width 0.3s ease-in-out; }
+
+        .rotation-modal { backdrop-filter: blur(5px); }
+
+        .rotation-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 5px; background: #e2e8f0; outline: none; margin-bottom: 15px; }
+
+        .dark .rotation-slider { background: #4a5568; }
+
+        .rotation-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(45deg, #667eea, #764ba2); cursor: pointer; box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; }
+
+        .rotation-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        
+
+        /* Custom Scrollbar */
+
+        ::-webkit-scrollbar { width: 8px; }
+
+        ::-webkit-scrollbar-track { background: transparent; }
+
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+    </style>
+
 </head>
-<body>
 
-<div class="container">
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center min-h-screen p-4">
 
-  <!-- ==== CABEÇALHO ==== -->
-  <header class="header" role="banner">
-    <div class="logo">
-      <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logótipo HAlexandre">
-    </div>
-    <div class="header-content">
-      <h1>Comparador Premium</h1>
-      <p>Validação avançada de boletos com <span class="tip-realtime">leitura PDF/OCR e verificação matemática</span>.</p>
-    </div>
-    <button class="theme-toggle" id="btn-theme" aria-label="Alternar modo escuro/claro" title="Alternar tema">🌙</button>
-  </header>
 
-  <!-- ==== CAMPOS DE ENTRADA ==== -->
-  <main role="main">
-    <div class="input-grid">
-      <!-- Campo SIENGE -->
-      <div class="card" role="region" aria-label="Campo SIENGE">
-        <div class="card-header">
-          <div class="icon">📄</div>
-          <h2>SIENGE</h2>
+
+    <div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
+
+        <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
+
+
+
+        <header class="text-center mb-6 flex items-center justify-center gap-4">
+
+            <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logótipo" class="w-12 h-12 rounded-full object-cover shadow-md">
+
+            <div class="text-left">
+
+                <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Extrator e Editor PRO</h2>
+
+                <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Cole, rotacione e extraia números de qualquer imagem.</p>
+
+            </div>
+
+        </header>
+
+
+
+        <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all group">
+
+            <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3 group-hover:text-indigo-500 transition-colors"></i>
+
+            <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste imagens</p>
+
+            <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
+
+            <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
+
+                <i class="fas fa-upload mr-2"></i> Selecionar Ficheiros
+
+            </label>
+
+            <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+
         </div>
-        <textarea id="inp-sienge"
-          aria-label="Chave gerada pelo SIENGE"
-          placeholder="Cole aqui a chave gerada pelo SIENGE..."></textarea>
-        <div class="digit-counter" id="counter-sienge">0 dígitos</div>
-      </div>
 
-      <!-- Campo BOLETO (com OCR / PDF / Anexo) -->
-      <div class="card" id="card-boleto" role="region" aria-label="Campo Boleto">
-        <div class="card-header">
-          <div class="icon">🏦</div>
-          <h2>BOLETO</h2>
-          
-          <!-- NOVO: Botão de Anexo para dispositivos/navegadores que bloqueiam colar ficheiros -->
-          <label for="file-upload" class="btn-attach" title="Procurar PDF ou Imagem no computador">
-            📎 Anexar
-          </label>
-          <input type="file" id="file-upload" accept="image/*, application/pdf" style="display:none;">
-          
-          <div id="scanner-status" class="scanner-status" aria-live="polite">⏳ Lendo...</div>
+
+
+        <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
+
+        <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
+
+            <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width: 0%"></div>
+
         </div>
-        <textarea id="inp-boleto"
-          aria-label="Chave do boleto bancário"
-          placeholder="Cole o texto, IMAGEM (Ctrl+V), arraste um arquivo ou use o botão 'Anexar'..."></textarea>
-        <div class="digit-counter" id="counter-boleto">0 dígitos</div>
-      </div>
+
+
+
+        <!-- Canvas agora será exibido quando houver imagem -->
+
+        <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md border border-slate-200 dark:border-slate-600 hidden"></canvas>
+
+
+
+        <div class="mt-6">
+
+            <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
+
+            <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner" placeholder="Os números extraídos aparecerão aqui..."></textarea>
+
+            <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
+
+        </div>
+
+
+
+        <div class="flex flex-wrap justify-center gap-3 mt-4">
+
+            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Mantém apenas números e classifica"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
+
+            <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Copia APENAS os números (sem as etiquetas)"><i class="fas fa-copy mr-2"></i>Copiar Números</button>
+
+            <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+
+        </div>
+
+        
+
+        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+
+             <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
+
+             <div class="flex flex-wrap justify-center gap-3">
+
+               <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
+
+               <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="Simples Nacional" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
+
+               <a href="https://consultadanfe.com/" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
+
+             </div>
+
+        </div>
+
+        <div class="mt-8">
+
+             <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
+
+             <div id="historyContainer" class="space-y-2"></div>
+
+        </div>
+
+
+
+        <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
+
     </div>
 
-    <!-- ==== AÇÕES ==== -->
-    <div class="action-bar" role="toolbar" aria-label="Ações principais">
-      <button class="btn btn-primary" onclick="comparar()" id="btn-comparar" aria-label="Comparar chaves">🔍 Comparar</button>
-      <button class="btn btn-secondary" onclick="limpar()" aria-label="Limpar todos os campos">🗑️ Limpar</button>
-      <button class="btn btn-export" id="btn-exportar" onclick="exportarPDF()" aria-label="Exportar resultado em PDF" style="display:none;">📥 Exportar PDF</button>
+
+
+    <!-- Modal de Rotação (Lógica original mantida) -->
+
+    <div id="rotationModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
+
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
+
+            <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Fechar">&times;</button>
+
+            <h3 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-4">Ajustar Rotação da Imagem</h3>
+
+            <div class="image-container mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg flex justify-center">
+
+                <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 ease-in-out rounded-md" alt="Imagem para rotacionar">
+
+            </div>
+
+            <div class="controls mt-4 max-w-lg mx-auto">
+
+                 <div class="control-group mb-4">
+
+                     <div class="flex justify-between items-center mb-2">
+
+                        <label class="font-semibold text-slate-700 dark:text-slate-300">Ângulo:</label>
+
+                        <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span>
+
+                     </div>
+
+                     <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
+
+                 </div>
+
+                 <div class="quick-controls flex justify-center flex-wrap gap-2 mb-4">
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0" id="resetRotationBtn">0°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
+
+                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
+
+                 </div>
+
+                 <div class="flex justify-center gap-4">
+
+                     <button id="cancelRotationBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-times mr-2"></i>Cancelar</button>
+
+                     <button id="confirmRotationBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-green-500/30"><i class="fas fa-check mr-2"></i>Confirmar e Extrair</button>
+
+                 </div>
+
+            </div>
+
+        </div>
+
     </div>
-    <p class="tip">
-      Dica: cole imagens (<kbd>Ctrl+V</kbd>), arraste PDFs ou use <kbd>Ctrl+Enter</kbd> para comparar • <kbd>Esc</kbd> para limpar
-    </p>
-
-    <!-- ==== ÁREA DE RESULTADO ==== -->
-    <div class="card" id="resultado-card" role="region" aria-label="Resultado da comparação" aria-live="polite">
-
-      <!-- SIENGE normalizado visualmente -->
-      <div class="secao-header">
-        <h3 class="secao-titulo">SIENGE (Normalizado) <span id="tipo-badge-sienge"></span></h3>
-        <button class="btn-icon-copy" onclick="copiarChave('sienge', this)" aria-label="Copiar dígitos do SIENGE">📋 Copiar Limpa</button>
-      </div>
-      <div class="digits-display" id="out-sienge" aria-label="Dígitos SIENGE com marcação de divergências"></div>
-
-      <hr class="divider" />
-
-      <!-- BOLETO normalizado visualmente -->
-      <div class="secao-header">
-        <h3 class="secao-titulo">BOLETO (Normalizado) <span id="tipo-badge-boleto"></span></h3>
-        <button class="btn-icon-copy" onclick="copiarChave('boleto', this)" aria-label="Copiar dígitos do Boleto">📋 Copiar Limpa</button>
-      </div>
-      <div class="digits-display" id="out-boleto" aria-label="Dígitos Boleto com marcação de divergências"></div>
-
-      <hr class="divider" />
-
-      <!-- Resultado Final -->
-      <div class="secao-header"><h3 class="secao-titulo">Resultado Final</h3></div>
-      <div id="out-status" role="status"></div>
-
-      <hr class="divider" />
-
-      <!-- Validação Matemática -->
-      <div class="secao-header"><h3 class="secao-titulo">Validação Matemática (Dígito Verificador)</h3></div>
-      <div class="validacao-box" id="out-validacao" aria-label="Resultado da validação matemática"></div>
-
-      <hr class="divider" />
-
-      <!-- Análise Técnica -->
-      <div class="secao-header"><h3 class="secao-titulo">Análise Técnica</h3></div>
-      <div class="analise-box" id="out-analise"></div>
-    </div>
-
-    <!-- ==== HISTÓRICO ==== -->
-    <div class="historico-section" id="historico-section" role="region" aria-label="Histórico de comparações">
-      <div class="historico-toggle" id="historico-toggle" role="button" tabindex="0" aria-expanded="false">
-        <span>🕒 Histórico de Comparações</span>
-        <span id="hist-count" style="background:var(--accent);color:#000;padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:800;">0</span>
-        <span class="arrow" style="margin-left:auto;">▼</span>
-      </div>
-      <div class="historico-lista" id="historico-lista" role="list"></div>
-    </div>
-  </main>
-</div>
-
-<!-- ==== RODAPÉ ==== -->
-<footer class="footer" id="signature" role="contentinfo"></footer>
-
-<!-- ==== TOAST ==== -->
-<div class="toast" id="toast" role="alert" aria-live="assertive"></div>
-
-<!-- ==== MODAL DE ROTAÇÃO ==== -->
-<div class="modal-overlay" id="rotation-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
-  <div class="modal-content">
-    <button class="modal-close" id="btn-close-modal" aria-label="Fechar modal">&times;</button>
-    <h2 id="modal-title" style="text-align:center;margin-bottom:.5rem;font-size:1.5rem;font-weight:700;">Ajustar Imagem</h2>
-    <p style="text-align:center;color:var(--text-secondary);font-size:.9rem;margin-bottom:1.5rem;">Alinha o boleto para garantir leitura perfeita do código.</p>
-    <div class="rotation-preview">
-      <img id="rotatable-image" src="" alt="Preview da imagem para rotação">
-    </div>
-    <div style="text-align:center;margin-bottom:.5rem;font-weight:600;font-size:1.1rem;">
-      Ângulo: <span id="angle-display" style="color:var(--accent);">0.0°</span>
-    </div>
-    <input type="range" id="rotation-slider" class="rotation-slider" min="-180" max="180" value="0" step="0.1" aria-label="Ângulo de rotação">
-    <div class="quick-controls">
-      <button class="btn-quick" data-angle="-10">-10°</button>
-      <button class="btn-quick" data-angle="-1">-1°</button>
-      <button class="btn-quick" data-angle="-0.1">-0.1°</button>
-      <button class="btn-quick" data-angle="0" style="border-color:var(--accent);color:var(--accent);">0°</button>
-      <button class="btn-quick" data-angle="0.1">+0.1°</button>
-      <button class="btn-quick" data-angle="1">+1°</button>
-      <button class="btn-quick" data-angle="10">+10°</button>
-    </div>
-    <div class="action-bar" style="margin-top:2rem;">
-      <button class="btn btn-secondary" id="btn-cancel-rotation">Cancelar</button>
-      <button class="btn btn-primary" id="btn-confirm-rotation">✅ Confirmar e Extrair</button>
-    </div>
-  </div>
-</div>
-
-<script>
-'use strict';
-
-// ==== ASSINATURA DINÂMICA ====
-document.getElementById('signature').innerHTML =
-  `<p>Feito por HAlexandre © ${new Date().getFullYear()} - OCR Premium Edition</p>`;
-
-// ==== ESTADO GLOBAL ====
-let chaveLimpaSienge = '';
-let chaveLimpaBoleto = '';
-let ultimoResultado  = null; 
-let debounceTimer    = null;
-
-// ==== UTILITÁRIOS ====
-function normalizar(txt) { return txt.replace(/\D/g, ''); }
-
-function formatarBoleto(txt) {
-  const s = txt.replace(/\D/g, '');
-  if (s.length === 47) {
-    return s.replace(/^(\d{5})(\d{5})(\d{5})(\d{6})(\d{5})(\d{6})(\d)(\d{14})$/, '$1.$2 $3.$4 $5.$6 $7 $8');
-  } else if (s.length === 48) {
-    return s.replace(/^(\d{11})(\d)(\d{11})(\d)(\d{11})(\d)(\d{11})(\d)$/, '$1-$2 $3-$4 $5-$6 $7-$8');
-  }
-  return txt;
-}
-
-function showToast(msg, tipo = 'info', duracao = 3000) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast ${tipo} show`;
-  clearTimeout(el._timer);
-  el._timer = setTimeout(() => { el.className = 'toast'; }, duracao);
-}
-
-// ==== MODO ESCURO / CLARO ====
-(function initTheme() {
-  const saved = localStorage.getItem('theme') || 'dark';
-  if (saved === 'light') document.body.classList.add('light-mode');
-  document.getElementById('btn-theme').textContent = saved === 'light' ? '☀️' : '🌙';
-})();
-
-document.getElementById('btn-theme').addEventListener('click', () => {
-  const isLight = document.body.classList.toggle('light-mode');
-  const icon = isLight ? '☀️' : '🌙';
-  document.getElementById('btn-theme').textContent = icon;
-  localStorage.setItem('theme', isLight ? 'light' : 'dark');
-});
-
-// ==== CONTADOR DE DÍGITOS ====
-function atualizarContador(inputId, counterId) {
-  const val = normalizar(document.getElementById(inputId).value);
-  const n   = val.length;
-  const el  = document.getElementById(counterId);
-  el.textContent = `${n} dígitos`;
-  el.className = 'digit-counter';
-  if (n === 47 || n === 48) el.classList.add('ok');
-  else if (n > 0 && n !== 47 && n !== 48) el.classList.add('warn');
-}
-
-// ==== DETECÇÃO DO TIPO DE BOLETO ====
-function detectarTipoBoleto(chave) {
-  if (!chave) return null;
-  const len = chave.length;
-  if (len === 47) return { tipo: 'Bancário', descricao: '47 dígitos – Boleto Bancário (Módulo 10/11)', modulo: 'bancario' };
-  if (len === 48) return { tipo: 'Convênio/Concessionária', descricao: '48 dígitos – Convênio/Concessionária (Módulo 10)', modulo: 'convenio' };
-  return { tipo: 'Desconhecido', descricao: `${len} dígitos – formato não reconhecido`, modulo: null };
-}
-
-function renderTipoBadge(info) {
-  if (!info || info.tipo === 'Desconhecido') return '';
-  return `<span class="tipo-badge" title="${info.descricao}">${info.tipo}</span>`;
-}
-
-// ==== VALIDAÇÃO MÓDULO 10 ====
-function modulo10(num) {
-  let soma = 0, mult = 2;
-  for (let i = num.length - 1; i >= 0; i--) {
-    let r = parseInt(num[i]) * mult;
-    soma += r > 9 ? r - 9 : r;
-    mult = mult === 2 ? 1 : 2;
-  }
-  const resto = soma % 10;
-  return resto === 0 ? 0 : 10 - resto;
-}
-
-// ==== VALIDAÇÃO MÓDULO 11 ====
-function modulo11(num, base = 9) {
-  let soma = 0, mult = 2;
-  for (let i = num.length - 1; i >= 0; i--) {
-    soma += parseInt(num[i]) * mult;
-    mult = mult >= base ? 2 : mult + 1;
-  }
-  const resto = soma % 11;
-  if (resto === 0 || resto === 1) return (base === 9) ? 1 : 0;
-  return 11 - resto;
-}
-
-function validarBoletoBancario(chave) {
-  if (chave.length !== 47) return { valido: false, msgs: ['Comprimento inválido para boleto bancário.'] };
-  const msgs = [];
-  let valido = true;
-
-  const c1 = chave.substring(0, 9);
-  const dv1Calc = modulo10(c1);
-  const dv1Real = parseInt(chave[9]);
-  const c1ok = dv1Calc === dv1Real;
-  if (!c1ok) valido = false;
-  msgs.push({ label: 'Campo 1 (dígito verificador)', ok: c1ok, detalhe: `Calculado: ${dv1Calc} | Encontrado: ${dv1Real}` });
-
-  const c2 = chave.substring(10, 20);
-  const dv2Calc = modulo10(c2);
-  const dv2Real = parseInt(chave[20]);
-  const c2ok = dv2Calc === dv2Real;
-  if (!c2ok) valido = false;
-  msgs.push({ label: 'Campo 2 (dígito verificador)', ok: c2ok, detalhe: `Calculado: ${dv2Calc} | Encontrado: ${dv2Real}` });
-
-  const c3 = chave.substring(21, 31);
-  const dv3Calc = modulo10(c3);
-  const dv3Real = parseInt(chave[31]);
-  const c3ok = dv3Calc === dv3Real;
-  if (!c3ok) valido = false;
-  msgs.push({ label: 'Campo 3 (dígito verificador)', ok: c3ok, detalhe: `Calculado: ${dv3Calc} | Encontrado: ${dv3Real}` });
-
-  const codBarras = chave.substring(0, 4) + chave.substring(33, 47) + chave.substring(4, 9) + chave.substring(10, 20) + chave.substring(21, 31);
-  const dvGeral = parseInt(chave[32]);
-  const dvGeralCalc = modulo11(codBarras, 9);
-  const gok = dvGeral === dvGeralCalc;
-  if (!gok) valido = false;
-  msgs.push({ label: 'Dígito Verificador Geral (Módulo 11)', ok: gok, detalhe: `Calculado: ${dvGeralCalc} | Encontrado: ${dvGeral}` });
-
-  return { valido, msgs };
-}
-
-function validarConvenio(chave) {
-  if (chave.length !== 48) return { valido: false, msgs: ['Comprimento inválido para convênio.'] };
-  const msgs = [];
-  let valido = true;
-
-  const segs = [
-    { num: chave.substring(0, 11),  dv: parseInt(chave[11]),  label: 'Segmento 1' },
-    { num: chave.substring(12, 23), dv: parseInt(chave[23]),  label: 'Segmento 2' },
-    { num: chave.substring(24, 35), dv: parseInt(chave[35]),  label: 'Segmento 3' },
-    { num: chave.substring(36, 47), dv: parseInt(chave[47]),  label: 'Segmento 4' },
-  ];
-
-  segs.forEach(s => {
-    const calc = modulo10(s.num);
-    const ok   = calc === s.dv;
-    if (!ok) valido = false;
-    msgs.push({ label: `${s.label} (Módulo 10)`, ok, detalhe: `Calculado: ${calc} | Encontrado: ${s.dv}` });
-  });
-
-  return { valido, msgs };
-}
-
-function renderValidacao(chave, secId) {
-  const el = document.getElementById(secId);
-  if (!chave || chave.length < 44) {
-    el.innerHTML = '<span class="validacao-item validacao-warn">⚠️ Chave muito curta para validação matemática.</span>';
-    return;
-  }
-  const info = detectarTipoBoleto(chave);
-  let resultado;
-  if (!info || info.modulo === null) {
-    el.innerHTML = `<span class="validacao-item validacao-warn">⚠️ Tamanho incomum (${chave.length} dígitos). Validação matemática não aplicável.</span>`;
-    return;
-  }
-  resultado = info.modulo === 'bancario' ? validarBoletoBancario(chave) : validarConvenio(chave);
-
-  let html = resultado.msgs.map(m => {
-    if (typeof m === 'string') return `<div class="validacao-item validacao-err">❌ ${m}</div>`;
-    const cls = m.ok ? 'validacao-ok' : 'validacao-err';
-    const ico = m.ok ? '✅' : '❌';
-    return `<div class="validacao-item ${cls}">${ico} <strong>${m.label}</strong> — ${m.detalhe}</div>`;
-  }).join('');
-
-  const resumo = resultado.valido
-    ? `<div class="validacao-item validacao-ok" style="margin-top:.5rem;font-weight:700;border-top:1px solid var(--border);padding-top:.5rem;">✅ Boleto VÁLIDO (Matematicamente correto)</div>`
-    : `<div class="validacao-item validacao-err" style="margin-top:.5rem;font-weight:700;border-top:1px solid var(--border);padding-top:.5rem;">❌ Boleto INVÁLIDO (Numeração corrompida ou falsa)</div>
-       <div style="font-size:0.85rem; color:var(--warning); margin-top:0.5rem; background: rgba(255,170,0,0.1); padding: 0.75rem; border-radius: 6px; line-height: 1.5; border: 1px solid rgba(255,170,0,0.3);">
-         ℹ️ <strong>Atenção:</strong> Se o quadro de comparação acima estiver OK, significa que os textos são iguais, mas <strong>a matemática do boleto falhou</strong> (ex: OCR errou um número ou o boleto foi gerado com defeito).
-       </div>`;
-
-  el.innerHTML = html + resumo;
-  return resultado;
-}
-
-// ==== EXTRAÇÃO DE LINHA DIGITÁVEL ====
-function extrairLinhaDigitavel(texto) {
-  const regexFmt = /\d{5}\.\d{5}\s+\d{5}\.\d{6}\s+\d\s+\d{14,}/;
-  const m = texto.match(regexFmt);
-  if (m) return m[0].replace(/\D/g, '');
-  
-  const seqs = texto.match(/\d[\d\s]{42,50}\d/g);
-  if (seqs) {
-    for (const s of seqs) {
-      const n = s.replace(/\D/g, '');
-      if (n.length >= 44 && n.length <= 48) return n;
-    }
-  }
-  return null;
-}
-
-// ==== GERAÇÃO DO HTML DE DÍGITOS ====
-function gerarHTML(str, referencia, maxLen) {
-  if (!str && !referencia) return '<em style="color:var(--text-muted);font-style:italic">— vazio —</em>';
-  let html = '';
-  for (let i = 0; i < maxLen; i++) {
-    const c    = str[i];
-    const cRef = referencia ? referencia[i] : undefined;
-    if (c === undefined) {
-      html += `<span class="digit-diff digit-pad" aria-label="dígito ausente na posição ${i + 1}" title="Posição ${i + 1} ausente">-</span>`;
-    } else if (cRef === undefined || c !== cRef) {
-      html += `<span class="digit-diff" aria-label="dígito divergente na posição ${i + 1}" title="Divergência na posição ${i + 1}">${c}</span>`;
-    } else {
-      html += `<span>${c}</span>`;
-    }
-  }
-  return html;
-}
-
-function copiarChave(tipo, btnEl) {
-  const texto = tipo === 'sienge' ? chaveLimpaSienge : chaveLimpaBoleto;
-  if (!texto) return;
-  navigator.clipboard.writeText(texto).then(() => {
-    const orig = btnEl.innerHTML;
-    btnEl.innerHTML = '✔️ Copiado!';
-    btnEl.style.color = 'var(--success)';
-    btnEl.style.borderColor = 'var(--success)';
-    showToast('Chave copiada!', 'success');
-    setTimeout(() => { btnEl.innerHTML = orig; btnEl.style.color = ''; btnEl.style.borderColor = ''; }, 2000);
-  }).catch(e => {
-    showToast('Falha ao copiar.', 'error');
-  });
-}
-
-// ==== HISTÓRICO ====
-const HIST_KEY = 'comparador_historico';
-const HIST_MAX = 10;
-
-function carregarHistorico() {
-  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
-  catch (e) { return []; }
-}
-
-function salvarEntradaHistorico(s, b, identicos) {
-  if (!s && !b) return;
-  const hist = carregarHistorico();
-  hist.unshift({
-    data: new Date().toLocaleString('pt-BR'),
-    resultado: identicos ? 'OK' : 'DIFERENTE',
-    sienge: s.substring(0, 20),
-    boleto: b.substring(0, 20)
-  });
-  if (hist.length > HIST_MAX) hist.pop();
-  try { localStorage.setItem(HIST_KEY, JSON.stringify(hist)); } catch (e) {}
-  renderHistorico();
-}
-
-function renderHistorico() {
-  const hist = carregarHistorico();
-  const lista = document.getElementById('historico-lista');
-  document.getElementById('hist-count').textContent = hist.length;
-
-  if (hist.length === 0) {
-    lista.innerHTML = '<div class="hist-empty">Nenhuma comparação no histórico.</div>';
-    return;
-  }
-
-  lista.innerHTML = hist.map((h) =>
-    `<div class="hist-item">
-      <span class="${h.resultado === 'OK' ? 'hist-ok' : 'hist-diff'}">${h.resultado === 'OK' ? '✅ OK' : '❌ DIFERENTE'}</span>
-      <span class="hist-data">${h.data}</span>
-      <span class="hist-preview">S: ${h.sienge}… | B: ${h.boleto}…</span>
-    </div>`
-  ).join('');
-}
-
-document.getElementById('historico-toggle').addEventListener('click', function() {
-  const lista = document.getElementById('historico-lista');
-  const aberto = lista.classList.toggle('visible');
-  this.classList.toggle('open', aberto);
-});
-renderHistorico();
-
-// ==== COMPARAÇÃO ====
-function comparar() {
-  const rawS = document.getElementById('inp-sienge').value;
-  const rawB = document.getElementById('inp-boleto').value;
-
-  chaveLimpaSienge = normalizar(rawS);
-  chaveLimpaBoleto = normalizar(rawB);
-
-  if (chaveLimpaSienge.length === 47 || chaveLimpaSienge.length === 48) {
-    document.getElementById('inp-sienge').value = formatarBoleto(chaveLimpaSienge);
-  }
-  if (chaveLimpaBoleto.length === 47 || chaveLimpaBoleto.length === 48) {
-    document.getElementById('inp-boleto').value = formatarBoleto(chaveLimpaBoleto);
-  }
-
-  atualizarContador('inp-sienge', 'counter-sienge');
-  atualizarContador('inp-boleto', 'counter-boleto');
-
-  if (!chaveLimpaSienge && !chaveLimpaBoleto) {
-    document.getElementById('resultado-card').style.display = 'none';
-    document.getElementById('btn-exportar').style.display = 'none';
-    return;
-  }
-
-  const maxLen = Math.max(chaveLimpaSienge.length, chaveLimpaBoleto.length);
-  let totalDiv = 0, primeiraDiv = -1;
-
-  for (let i = 0; i < maxLen; i++) {
-    if (chaveLimpaSienge[i] !== chaveLimpaBoleto[i]) {
-      totalDiv++;
-      if (primeiraDiv === -1) primeiraDiv = i + 1;
-    }
-  }
-
-  const identicos = chaveLimpaSienge === chaveLimpaBoleto;
-  const tamDif    = chaveLimpaSienge.length !== chaveLimpaBoleto.length;
-
-  const visualSienge = formatarBoleto(chaveLimpaSienge) || rawS;
-  const visualBoleto = formatarBoleto(chaveLimpaBoleto) || rawB;
-  const maxLenVis = Math.max(visualSienge.length, visualBoleto.length);
-
-  document.getElementById('out-sienge').innerHTML = gerarHTML(visualSienge, visualBoleto, maxLenVis);
-  document.getElementById('out-boleto').innerHTML = gerarHTML(visualBoleto, visualSienge, maxLenVis);
-
-  const tipoS = detectarTipoBoleto(chaveLimpaSienge);
-  const tipoB = detectarTipoBoleto(chaveLimpaBoleto);
-  document.getElementById('tipo-badge-sienge').innerHTML = renderTipoBadge(tipoS);
-  document.getElementById('tipo-badge-boleto').innerHTML = renderTipoBadge(tipoB);
-
-  const statusEl = document.getElementById('out-status');
-  statusEl.innerHTML = identicos
-    ? `<span class="status-badge status-ok">✅ OK – As chaves são idênticas.</span>`
-    : `<span class="status-badge status-diff">❌ DIFERENTE – As chaves não coincidem.</span>`;
-
-  const resV1 = renderValidacao(chaveLimpaSienge, 'out-validacao');
-
-  const analiseEl = document.getElementById('out-analise');
-  if (identicos) {
-    analiseEl.className = 'analise-box';
-    analiseEl.innerHTML = `✅ Nenhuma divergência encontrada.
-      <ul>
-        <li>Dígitos em SIENGE: <strong>${chaveLimpaSienge.length}</strong></li>
-        <li>Dígitos em BOLETO: <strong>${chaveLimpaBoleto.length}</strong></li>
-      </ul>`;
-  } else {
-    analiseEl.className = 'analise-box alerta';
-    let html = tamDif ? `⚠️ <strong>Diferença na quantidade de dígitos.</strong><br>` : '';
-    html += `<ul>
-      <li>Dígitos em SIENGE: <strong>${chaveLimpaSienge.length}</strong></li>
-      <li>Dígitos em BOLETO: <strong>${chaveLimpaBoleto.length}</strong></li>
-      <li>Primeira divergência na posição: <strong>${primeiraDiv > 0 ? primeiraDiv : 'N/A'}</strong></li>
-      <li>Total de dígitos divergentes: <strong>${totalDiv}</strong></li>
-    </ul>`;
-    analiseEl.innerHTML = html;
-  }
-
-  ultimoResultado = {
-    data: new Date().toLocaleString('pt-BR'),
-    sienge: chaveLimpaSienge, boleto: chaveLimpaBoleto,
-    identicos, totalDiv, primeiraDiv, tamDif,
-    tipoS: tipoS?.descricao || '—', tipoB: tipoB?.descricao || '—',
-    validacaoSienge: resV1
-  };
-
-  salvarEntradaHistorico(chaveLimpaSienge, chaveLimpaBoleto, identicos);
-  document.getElementById('resultado-card').style.display = 'block';
-  document.getElementById('btn-exportar').style.display = 'inline-flex';
-}
-
-function limpar() {
-  document.getElementById('inp-sienge').value = '';
-  document.getElementById('inp-boleto').value = '';
-  document.getElementById('resultado-card').style.display = 'none';
-  document.getElementById('btn-exportar').style.display = 'none';
-  document.getElementById('counter-sienge').textContent = '0 dígitos';
-  document.getElementById('counter-sienge').className = 'digit-counter';
-  document.getElementById('counter-boleto').textContent = '0 dígitos';
-  document.getElementById('counter-boleto').className = 'digit-counter';
-  chaveLimpaSienge = '';
-  chaveLimpaBoleto = '';
-  ultimoResultado  = null;
-  document.getElementById('inp-sienge').focus();
-}
-
-function exportarPDF() {
-  if (!ultimoResultado || typeof window.jspdf === 'undefined') return;
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-  const r = ultimoResultado;
-  let y = 20, lm = 15, pw = 180;
-
-  const addLine = (txt, size = 10, bold = false, cor = [220,220,220]) => {
-    doc.setFontSize(size);
-    doc.setFont('helvetica', bold ? 'bold' : 'normal');
-    doc.setTextColor(...cor);
-    const linhas = doc.splitTextToSize(txt, pw);
-    doc.text(linhas, lm, y);
-    y += linhas.length * (size * 0.45);
-  };
-
-  doc.setFillColor(10, 14, 26);
-  doc.rect(0, 0, 210, 297, 'F');
-  addLine('COMPARADOR PREMIUM DE BOLETOS', 18, true, [0, 212, 255]);
-  addLine(`Data/Hora: ${r.data}`, 10, false, [107, 116, 148]); y += 6;
-
-  addLine(`SIENGE: ${formatarBoleto(r.sienge)}`, 10, false, [255,255,255]); y += 3;
-  addLine(`BOLETO: ${formatarBoleto(r.boleto)}`, 10, false, [255,255,255]); y += 6;
-
-  addLine('RESULTADO', 11, true, [0,212,255]);
-  if (r.identicos) {
-    addLine('✅ CHAVES IDÊNTICAS', 11, true, [0, 255, 136]);
-  } else {
-    addLine('❌ CHAVES DIFERENTES', 11, true, [255, 71, 87]);
-  }
-  
-  doc.save(`boleto_relatorio_${Date.now()}.pdf`);
-}
-
-function compararDebounced() {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(comparar, 300);
-}
-
-document.getElementById('inp-sienge').addEventListener('input', () => { atualizarContador('inp-sienge', 'counter-sienge'); compararDebounced(); });
-document.getElementById('inp-boleto').addEventListener('input', () => { atualizarContador('inp-boleto', 'counter-boleto'); compararDebounced(); });
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') limpar(); 
-  if (e.ctrlKey && e.key === 'Enter') { comparar(); document.getElementById('resultado-card').scrollIntoView(); }
-});
-
-// ==== ROTAÇÃO E SCANNER ====
-const rotationState = { current: 0, objectURL: null };
-
-const Rotator = {
-  dom: { modal: document.getElementById('rotation-modal'), img: document.getElementById('rotatable-image'), slider: document.getElementById('rotation-slider'), angleDisplay: document.getElementById('angle-display'), quickBtns: document.querySelectorAll('.btn-quick'), btnConfirm: document.getElementById('btn-confirm-rotation'), btnCancel: document.getElementById('btn-cancel-rotation'), btnClose: document.getElementById('btn-close-modal') },
-  init() {
-    this.dom.slider.addEventListener('input', e => this.setAngle(parseFloat(e.target.value)));
-    this.dom.quickBtns.forEach(btn => btn.addEventListener('click', e => this.setAngle(parseFloat(e.target.dataset.angle) === 0 ? 0 : rotationState.current + parseFloat(e.target.dataset.angle))));
-    this.dom.btnCancel.addEventListener('click', () => this.hide());
-    this.dom.btnClose.addEventListener('click', () => this.hide());
-    this.dom.btnConfirm.addEventListener('click', async () => {
-      this.dom.btnConfirm.disabled = true;
-      try {
-        const blob = await this.getRotatedBlob();
-        this.hide();
-        Scanner.processImage(blob, document.getElementById('inp-boleto'));
-      } catch(e) {} finally { this.dom.btnConfirm.disabled = false; }
-    });
-  },
-  open(file) {
-    if (rotationState.objectURL) URL.revokeObjectURL(rotationState.objectURL);
-    rotationState.objectURL = URL.createObjectURL(file);
-    this.dom.img.src = rotationState.objectURL;
-    this.setAngle(0);
-    this.dom.modal.classList.add('active');
-  },
-  hide() {
-    this.dom.modal.classList.remove('active');
-  },
-  setAngle(angle) {
-    rotationState.current = angle;
-    this.dom.slider.value = angle;
-    this.dom.img.style.transform = `rotate(${angle}deg)`;
-    this.dom.angleDisplay.textContent = `${angle.toFixed(1)}°`;
-  },
-  getRotatedBlob() {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), img = new Image();
-      img.onload = () => {
-        const rad = (rotationState.current * Math.PI)/180, sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
-        canvas.width = img.width * cos + img.height * sin; canvas.height = img.width * sin + img.height * cos;
-        ctx.translate(canvas.width/2, canvas.height/2); ctx.rotate(rad); ctx.drawImage(img, -img.width/2, -img.height/2);
-        canvas.toBlob(blob => resolve(blob), 'image/png');
-      };
-      img.src = rotationState.objectURL;
-    });
-  }
-};
-Rotator.init();
-
-const PDFReader = {
-  async extract(file) {
-    return new Promise((resolve, reject) => {
-      if (!window.pdfjsLib) {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-        script.onload = () => {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-          this._doExtract(file).then(resolve).catch(reject);
-        };
-        document.head.appendChild(script);
-      } else {
-        this._doExtract(file).then(resolve).catch(reject);
-      }
-    });
-  },
-  async _doExtract(file) {
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
-    for (let p = 1; p <= pdf.numPages; p++) {
-      const page = await pdf.getPage(p), content = await page.getTextContent();
-      fullText += content.items.map(i => i.str).join(' ') + '\n';
-    }
-    return fullText;
-  }
-};
-
-const Scanner = {
-  async processImage(blobOrFile, targetInput) {
-    const statusEl = document.getElementById('scanner-status');
-    targetInput.disabled = true; statusEl.style.display = 'block';
-    
-    try {
-      if (blobOrFile.type === 'application/pdf') {
-        try {
-          const texto = await PDFReader.extract(blobOrFile);
-          const linhaDigitavel = extrairLinhaDigitavel(texto);
-          if (linhaDigitavel) {
-            targetInput.value = formatarBoleto(linhaDigitavel);
-            statusEl.innerText = '✅ PDF Extraído!';
-            setTimeout(comparar, 100); return; 
-          } else throw new Error();
-        } catch (pdfErr) {
-          showToast('Falha ao ler texto do PDF.', 'error');
-          return;
-        }
-      }
-
-      let extractedText = '', resultFound = false;
-      const objectURL = URL.createObjectURL(blobOrFile);
-      const preprocessed = await this.preprocessImage(objectURL);
-      
-      try {
-        const codeReader = new ZXing.BrowserMultiFormatReader();
-        const result = await codeReader.decodeFromImageUrl(preprocessed);
-        if (result && result.getText()) { extractedText = result.getText(); resultFound = true; }
-      } catch (e) {}
-
-      if (!resultFound) {
-        statusEl.innerText = '👁️ OCR...';
-        const worker = await Tesseract.createWorker('por', 1);
-        await worker.setParameters({ tessedit_char_whitelist: '0123456789 .' });
-        const { data } = await worker.recognize(preprocessed);
-        await worker.terminate();
-        const linhaOCR = extrairLinhaDigitavel(data.text);
-        if (linhaOCR) { extractedText = linhaOCR; resultFound = true; }
-        else {
-           const nums = data.text.match(/\d+/g);
-           if (nums && nums.length > 0) { extractedText = nums.join(''); resultFound = true; }
-        }
-      }
-
-      if (resultFound && extractedText) {
-        targetInput.value = formatarBoleto(extractedText);
-        statusEl.innerText = '✅ Concluído!';
-        setTimeout(comparar, 100);
-      } else showToast('Nenhum número válido encontrado.', 'error');
-      
-    } catch (e) {
-      showToast('Erro no processamento.', 'error');
-    } finally {
-      targetInput.disabled = false; setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
-    }
-  },
-
-  preprocessImage(src) {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
-        canvas.width = img.width; canvas.height = img.height;
-        ctx.filter = 'grayscale(1) contrast(1.6)'; ctx.drawImage(img, 0, 0);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.src = src;
-    });
-  },
-
-  setupListeners() {
-    const inp = document.getElementById('inp-boleto');
-    const fileUpload = document.getElementById('file-upload');
-
-    // Auxiliar centralizado para processar os arquivos
-    const handleFile = (file) => {
-      if (!file) return;
-      if (file.type.startsWith('image/')) Rotator.open(file);
-      else if (file.type === 'application/pdf') this.processImage(file, inp);
-      else showToast('Formato não suportado. Use PDF ou Imagem.', 'error');
-    };
-
-    // Nova Lógica: Input File Explícito (O Botão "Anexar")
-    fileUpload.addEventListener('change', e => {
-      handleFile(e.target.files[0]);
-      e.target.value = ''; // Reset
-    });
-
-    // Nova Lógica: Colar mais robusta para SO e Browser
-    inp.addEventListener('paste', e => {
-      // 1º Tentativa: Ler a lista real de ficheiros (Quando copiamos no Windows Explorer / Finder Mac)
-      const files = e.clipboardData?.files;
-      if (files && files.length > 0) {
-        const file = Array.from(files).find(f => f.type.startsWith('image/') || f.type === 'application/pdf');
-        if (file) {
-          e.preventDefault();
-          handleFile(file);
-          return;
-        }
-      }
-      
-      // 2º Tentativa: Fallback para Itens (Normalmente útil para PrintScreen / Snip & Sketch)
-      const items = e.clipboardData?.items;
-      if (items && items.length > 0) {
-        const item = Array.from(items).find(i => i.type.startsWith('image/') || i.type === 'application/pdf');
-        if (item) {
-          const file = item.getAsFile();
-          if (file) {
-             e.preventDefault();
-             handleFile(file);
-          }
-        }
-      }
-    });
-
-    // Drag & Drop
-    inp.addEventListener('dragover',  e => { e.preventDefault(); inp.classList.add('dragover'); });
-    inp.addEventListener('dragleave', e => { e.preventDefault(); inp.classList.remove('dragover'); });
-    inp.addEventListener('drop', e => {
-      e.preventDefault();
-      inp.classList.remove('dragover');
-      if (e.dataTransfer?.files?.length > 0) {
-        const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/') || f.type === 'application/pdf');
-        handleFile(file);
-      }
-    });
-  }
-};
-
-Scanner.setupListeners();
-</script>
+
+
+
+    <script>
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            const AppState = {
+
+                rotation: { current: 0, originalData: null },
+
+                extraction: { queue: [], totalFiles: 0, processedFiles: 0 }
+
+            };
+
+
+
+            const DOM = {
+
+                output: document.getElementById('output'),
+
+                preview: document.getElementById('preview'),
+
+                pasteArea: document.getElementById('pasteArea'),
+
+                fileInput: document.getElementById('fileInput'),
+
+                progressBar: document.getElementById('progressBar'),
+
+                progressFill: document.getElementById('progressFill'),
+
+                status: document.getElementById('status'),
+
+                copyBtn: document.getElementById('copyBtn'),
+
+                cleanJoinBtn: document.getElementById('cleanJoinBtn'),
+
+                clearBtn: document.getElementById('clearBtn'),
+
+                historyContainer: document.getElementById('historyContainer'),
+
+                charCounter: document.getElementById('charCounter'),
+
+                signature: document.getElementById('signature'),
+
+                themeToggle: document.getElementById('themeToggle'),
+
+                body: document.body.parentElement,
+
+                linkButtons: document.querySelectorAll('.link-button'),
+
+                rotationModal: document.getElementById('rotationModal'),
+
+                rotatableImage: document.getElementById('rotatableImage'),
+
+                rotationSlider: document.getElementById('rotationSlider'),
+
+                angleDisplay: document.getElementById('angleDisplay'),
+
+                quickBtns: document.querySelectorAll('.quick-btn'),
+
+                resetRotationBtn: document.getElementById('resetRotationBtn'),
+
+                confirmRotationBtn: document.getElementById('confirmRotationBtn'),
+
+                closeModalBtn: document.getElementById('closeModalBtn'),
+
+                cancelRotationBtn: document.getElementById('cancelRotationBtn'),
+
+            };
+
+
+
+            const UI = {
+
+                init() {
+
+                    this.loadTheme();
+
+                    this.setSignature();
+
+                    this.renderHistory(Logic.getHistory());
+
+                },
+
+                showStatus(message, type = 'processing') {
+
+                    const styles = {
+
+                        processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+
+                        success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+
+                        error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+
+                    };
+
+                    DOM.status.textContent = message;
+
+                    DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${styles[type] || styles.processing}`;
+
+                    DOM.status.classList.remove('hidden');
+
+                },
+
+                hideStatus() { DOM.status.classList.add('hidden'); },
+
+                updateProgress(percentage) {
+
+                    DOM.progressFill.style.width = `${percentage}%`;
+
+                    DOM.progressBar.style.display = percentage > 0 && percentage < 100 ? 'block' : 'none';
+
+                },
+
+                updateCharCounter() {
+
+                    const text = DOM.output.value;
+
+                    const digitCount = (text.match(/\d/g) || []).length;
+
+                    const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
+
+                    DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
+
+                    
+
+                    const hasText = text.trim().length > 0;
+
+                    DOM.copyBtn.disabled = !hasText;
+
+                    DOM.cleanJoinBtn.disabled = !hasText;
+
+                },
+
+                renderHistory(history) {
+
+                    DOM.historyContainer.innerHTML = '';
+
+                    if (history.length === 0) {
+
+                        DOM.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
+
+                        return;
+
+                    }
+
+                    history.forEach(item => {
+
+                        const div = document.createElement('div');
+
+                        div.className = 'bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-700';
+
+                        div.innerHTML = `<div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">${item.date}</div><div class="font-mono text-xs truncate text-slate-700 dark:text-slate-300">${item.content.replace(/\n/g, ' ')}</div>`;
+
+                        div.onclick = () => {
+
+                            DOM.output.value = item.content;
+
+                            UI.updateCharCounter();
+
+                        };
+
+                        DOM.historyContainer.appendChild(div);
+
+                    });
+
+                },
+
+                clearAll() {
+
+                    DOM.output.value = '';
+
+                    const ctx = DOM.preview.getContext('2d');
+
+                    if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
+
+                    DOM.preview.style.display = 'none'; 
+
+                    DOM.preview.classList.add('hidden');
+
+                    this.hideStatus();
+
+                    this.updateProgress(0);
+
+                    this.updateCharCounter();
+
+                },
+
+                toggleTheme() {
+
+                    const isDark = DOM.body.classList.toggle('dark');
+
+                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
+
+                    DOM.themeToggle.innerHTML = isDark ? '<i class="fas fa-sun text-yellow-400"></i>' : '🌙';
+
+                },
+
+                loadTheme() {
+
+                    const savedTheme = localStorage.getItem('theme');
+
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+                    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+
+                        DOM.body.classList.add('dark');
+
+                        DOM.themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+
+                    } else {
+
+                        DOM.themeToggle.innerHTML = '🌙';
+
+                    }
+
+                },
+
+                setSignature() {
+
+                    DOM.signature.innerHTML = `Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre © ${new Date().getFullYear()}`;
+
+                }
+
+            };
+
+
+
+            const Logic = {
+
+                async copyToClipboard(text) {
+
+                    if (!text || !text.trim()) return false;
+
+                    try {
+
+                        await navigator.clipboard.writeText(text);
+
+                        return true;
+
+                    } catch (err) {
+
+                        const textArea = document.createElement("textarea");
+
+                        textArea.value = text;
+
+                        document.body.appendChild(textArea);
+
+                        textArea.select();
+
+                        const success = document.execCommand('copy');
+
+                        document.body.removeChild(textArea);
+
+                        return success;
+
+                    }
+
+                },
+
+                getHistory() { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
+
+                saveHistory(text) {
+
+                    if (!text.trim()) return;
+
+                    let history = this.getHistory();
+
+                    if (history.length > 0 && history[0].content === text) return;
+
+                    history.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
+
+                    history = history.slice(0, 5);
+
+                    localStorage.setItem('ocrHistory', JSON.stringify(history));
+
+                },
+
+                getRotatedImageBlob() {
+
+                    return new Promise((resolve) => {
+
+                        const canvas = document.createElement('canvas');
+
+                        const ctx = canvas.getContext('2d');
+
+                        const img = new Image();
+
+                        img.onload = () => {
+
+                            const rad = (AppState.rotation.current * Math.PI) / 180;
+
+                            const sin = Math.abs(Math.sin(rad));
+
+                            const cos = Math.abs(Math.cos(rad));
+
+                            canvas.width = img.width * cos + img.height * sin;
+
+                            canvas.height = img.width * sin + img.height * cos;
+
+                            ctx.translate(canvas.width / 2, canvas.height / 2);
+
+                            ctx.rotate(rad);
+
+                            ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+                            canvas.toBlob(resolve, 'image/png');
+
+                        };
+
+                        img.src = AppState.rotation.originalData;
+
+                    });
+
+                },
+
+                classify(num) {
+
+                    // Remove tudo que não é número para contar dígitos
+
+                    const clean = num.replace(/\D/g, '');
+
+                    const len = clean.length;
+
+                    let label = '';
+
+                    
+
+                    if (len === 47 || len === 48) label = 'BOLETO';
+
+                    else if (len === 44) label = 'NFe';
+
+                    else if (len === 14) label = 'CNPJ';
+
+                    else if (len === 11) label = 'CPF';
+
+                    
+
+                    if (label) {
+
+                        // Retorna com a etiqueta no FINAL para facilitar a cópia manual se necessário
+
+                        return `${num}   | ${label}`;
+
+                    }
+
+                    return num;
+
+                }
+
+            };
+
+
+
+            const Rotator = {
+
+                showNext() {
+
+                    const file = AppState.extraction.queue.shift();
+
+                    if (file) {
+
+                        const reader = new FileReader();
+
+                        reader.onload = (e) => {
+
+                            AppState.rotation.originalData = e.target.result;
+
+                            DOM.rotatableImage.src = AppState.rotation.originalData;
+
+                            this.reset();
+
+                            DOM.rotationModal.classList.remove('hidden');
+
+                        };
+
+                        reader.readAsDataURL(file);
+
+                    } else {
+
+                        Extractor.finalize();
+
+                    }
+
+                },
+
+                hide() { DOM.rotationModal.classList.add('hidden'); },
+
+                update() {
+
+                    DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
+
+                    DOM.angleDisplay.textContent = `${AppState.rotation.current.toFixed(1)}°`;
+
+                    DOM.rotationSlider.value = AppState.rotation.current;
+
+                },
+
+                adjust(angle) {
+
+                    let newAngle = AppState.rotation.current + angle;
+
+                    if (newAngle > 180) newAngle = 180;
+
+                    if (newAngle < -180) newAngle = -180;
+
+                    AppState.rotation.current = newAngle;
+
+                    this.update();
+
+                },
+
+                reset() {
+
+                    AppState.rotation.current = 0;
+
+                    this.update();
+
+                }
+
+            };
+
+
+
+            const Extractor = {
+
+                start(files) {
+
+                    AppState.extraction.queue = Array.from(files);
+
+                    AppState.extraction.totalFiles = files.length;
+
+                    AppState.extraction.processedFiles = 0;
+
+                    UI.clearAll();
+
+                    Rotator.showNext();
+
+                },
+
+                async processCurrentImage(rotatedBlob) {
+
+                    const file = new File([rotatedBlob], "processed.png", { type: 'image/png' });
+
+                    AppState.extraction.processedFiles++;
+
+                    const progressText = AppState.extraction.totalFiles > 1 ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})` : '';
+
+                    UI.showStatus(`A processar ${progressText}...`, 'processing');
+
+                    
+
+                    const imageURL = URL.createObjectURL(file);
+
+                    
+
+                    try {
+
+                        const preprocessedImage = await this.preprocessImage(imageURL);
+
+                        let resultFound = false;
+
+
+
+                        // Tentar Código de Barras (ZXing)
+
+                        try {
+
+                            const codeReader = new ZXing.BrowserMultiFormatReader();
+
+                            const result = await codeReader.decodeFromImageUrl(preprocessedImage);
+
+                            if (result?.getText()) {
+
+                                const text = result.getText();
+
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(text);
+
+                                resultFound = true;
+
+                            }
+
+                        } catch (err) {}
+
+                        
+
+                        // Tentar OCR (Tesseract)
+
+                        if (!resultFound) { 
+
+                            UI.showStatus(`🔍 Lendo texto... ${progressText}`, 'processing');
+
+                            const worker = await Tesseract.createWorker({
+
+                                logger: m => {
+
+                                    if (m.status === 'recognizing text') UI.updateProgress(50 + Math.round(m.progress * 50));
+
+                                }
+
+                            });
+
+                            await worker.loadLanguage('por');
+
+                            await worker.initialize('por');
+
+                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' }); 
+
+                            
+
+                            const { data } = await worker.recognize(preprocessedImage);
+
+                            await worker.terminate();
+
+
+
+                            const numeros = data.text.match(/\d+/g);
+
+                            if (numeros?.length > 0) {
+
+                                const uniqueNumbers = [...new Set(numeros)];
+
+                                // Aplica a classificação aqui
+
+                                const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
+
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
+
+                                resultFound = true;
+
+                            }
+
+                        }
+
+
+
+                        if (!resultFound) {
+
+                            UI.showStatus(`⚠️ Nada encontrado nesta imagem.`, 'error');
+
+                        }
+
+
+
+                    } catch (error) {
+
+                        console.error('Erro:', error);
+
+                        UI.showStatus(`❌ Erro ao processar.`, 'error');
+
+                    } finally {
+
+                        URL.revokeObjectURL(imageURL);
+
+                        UI.updateProgress(100);
+
+                        Rotator.showNext();
+
+                    }
+
+                },
+
+                finalize() {
+
+                    if (DOM.output.value.trim()) {
+
+                        UI.showStatus(`✅ Concluído!`, 'success');
+
+                        Logic.saveHistory(DOM.output.value);
+
+                        UI.renderHistory(Logic.getHistory());
+
+                    }
+
+                    UI.updateCharCounter();
+
+                },
+
+                preprocessImage(imageSource) {
+
+                    return new Promise((resolve, reject) => {
+
+                        const img = new Image();
+
+                        img.crossOrigin = "Anonymous";
+
+                        img.onload = () => {
+
+                            const canvas = DOM.preview;
+
+                            const ctx = canvas.getContext('2d');
+
+                            canvas.width = img.width;
+
+                            canvas.height = img.height;
+
+                            ctx.filter = 'grayscale(1) contrast(1.5)';
+
+                            ctx.drawImage(img, 0, 0);
+
+                            
+
+                            // Mantém a imagem visível como conferência
+
+                            canvas.classList.remove('hidden');
+
+                            canvas.style.display = 'block';
+
+
+
+                            resolve(canvas.toDataURL('image/png'));
+
+                        };
+
+                        img.onerror = reject;
+
+                        img.src = imageSource;
+
+                    });
+
+                }
+
+            };
+
+            
+
+            const Events = {
+
+                setup() {
+
+                    const handleImageFiles = (files) => {
+
+                        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+
+                        if (imageFiles.length > 0) Extractor.start(imageFiles);
+
+                    };
+
+                    
+
+                    document.addEventListener('paste', e => {
+
+                        if (!DOM.rotationModal.classList.contains('hidden')) return;
+
+                        const imageFile = [...(e.clipboardData?.items || [])].map(i => i.getAsFile()).find(f => f?.type.startsWith('image/'));
+
+                        if (imageFile) { e.preventDefault(); Extractor.start([imageFile]); }
+
+                    });
+
+
+
+                    DOM.pasteArea.addEventListener('click', () => DOM.fileInput.click());
+
+                    DOM.pasteArea.addEventListener('dragover', e => { e.preventDefault(); DOM.pasteArea.classList.add('border-indigo-500'); });
+
+                    DOM.pasteArea.addEventListener('dragleave', () => DOM.pasteArea.classList.remove('border-indigo-500'));
+
+                    DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); DOM.pasteArea.classList.remove('border-indigo-500'); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
+
+                    DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
+
+
+
+                    // Lógica de "Limpar e Classificar"
+
+                    DOM.cleanJoinBtn.addEventListener('click', () => {
+
+                        const raw = DOM.output.value;
+
+                        if (raw.trim()) {
+
+                            const nums = raw.match(/\d+/g) || [];
+
+                            const unique = [...new Set(nums)];
+
+                            // Classifica ao limpar
+
+                            const classified = unique.map(n => Logic.classify(n));
+
+                            DOM.output.value = classified.join('\n');
+
+                            UI.updateCharCounter();
+
+                            
+
+                            const btn = DOM.cleanJoinBtn;
+
+                            const originalHTML = btn.innerHTML;
+
+                            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
+
+                            setTimeout(() => btn.innerHTML = originalHTML, 1500);
+
+                        }
+
+                    });
+
+
+
+                    // Cópia Inteligente: Remove as etiquetas antes de copiar
+
+                    DOM.copyBtn.addEventListener('click', async () => {
+
+                        const rawContent = DOM.output.value;
+
+                        // Regex: Remove pipe, espaços e a etiqueta (BOLETO, NFe...)
+
+                        const cleanContent = rawContent.replace(/\s+\|\s+(BOLETO|NFe|CNPJ|CPF)/g, '');
+
+                        
+
+                        const success = await Logic.copyToClipboard(cleanContent);
+
+                        if(success) {
+
+                            const btn = DOM.copyBtn;
+
+                            const originalHTML = btn.innerHTML;
+
+                            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
+
+                            btn.classList.replace('bg-blue-600', 'bg-green-600');
+
+                            setTimeout(() => { btn.innerHTML = originalHTML; btn.classList.replace('bg-green-600', 'bg-blue-600'); }, 2000);
+
+                        }
+
+                    });
+
+                    
+
+                    DOM.clearBtn.addEventListener('click', () => UI.clearAll());
+
+                    DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
+
+                    DOM.output.addEventListener('input', () => UI.updateCharCounter());
+
+                    
+
+                    // Rotação
+
+                    DOM.rotationSlider.addEventListener('input', (e) => {
+
+                         AppState.rotation.current = parseFloat(e.target.value);
+
+                         Rotator.update();
+
+                    });
+
+                    DOM.resetRotationBtn.addEventListener('click', () => { 
+
+                        if(DOM.resetRotationBtn.dataset.angle) Rotator.adjust(0); 
+
+                        else Rotator.reset(); 
+
+                    });
+
+                    DOM.closeModalBtn.addEventListener('click', () => { Rotator.hide(); AppState.extraction.queue = []; });
+
+                    DOM.cancelRotationBtn.addEventListener('click', () => DOM.closeModalBtn.click());
+
+                    DOM.quickBtns.forEach(btn => btn.addEventListener('click', e => {
+
+                        const angle = parseFloat(e.currentTarget.dataset.angle);
+
+                        if(angle === 0) Rotator.reset();
+
+                        else Rotator.adjust(angle);
+
+                    }));
+
+                    
+
+                    DOM.confirmRotationBtn.addEventListener('click', async () => {
+
+                        Rotator.hide();
+
+                        const rotatedBlob = await Logic.getRotatedImageBlob();
+
+                        await Extractor.processCurrentImage(rotatedBlob);
+
+                    });
+
+
+
+                    // Links Úteis
+
+                    DOM.linkButtons.forEach(button => {
+
+                        button.addEventListener('click', async (e) => {
+
+                            e.preventDefault();
+
+                            const el = e.currentTarget;
+
+                            const pattern = el.dataset.pattern;
+
+                            const text = DOM.output.value;
+
+                            // Busca apenas números (ignora as etiquetas para a validação)
+
+                            const cleanText = text.replace(/\D/g, ''); 
+
+                            const match = cleanText.match(new RegExp(pattern));
+
+                            
+
+                            if (match) {
+
+                                window.open(el.href, '_blank');
+
+                                await Logic.copyToClipboard(match[0]);
+
+                                UI.showStatus(`✅ Copiado: ${match[0]}`, 'success');
+
+                            } else {
+
+                                UI.showStatus(`⚠️ Padrão não encontrado no texto extraído.`, 'error');
+
+                            }
+
+                        });
+
+                    });
+
+                }
+
+            };
+
+            
+
+            // Inicializar
+
+            UI.init();
+
+            Events.setup();
+
+            UI.loadTheme();
+
+            UI.updateCharCounter();
+
+        });
+
+    </script>
+
 </body>
+
 </html>
+
+Ajudante
