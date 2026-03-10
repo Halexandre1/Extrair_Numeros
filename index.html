@@ -8,7 +8,6 @@
     <meta name="author" content="HAlexandre">
     <meta name="theme-color" content="#4f46e5">
 
-    <!-- Favicon -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -36,8 +35,6 @@
         .dark .rotation-slider { background: #4a5568; }
         .rotation-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(45deg, #667eea, #764ba2); cursor: pointer; box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; }
         .rotation-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-        
-        /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -196,7 +193,6 @@
                     const digitCount = (text.match(/\d/g) || []).length;
                     const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
                     DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
-                    
                     const hasText = text.trim().length > 0;
                     DOM.copyBtn.disabled = !hasText;
                     DOM.cleanJoinBtn.disabled = !hasText;
@@ -222,7 +218,7 @@
                     DOM.output.value = '';
                     const ctx = DOM.preview.getContext('2d');
                     if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
-                    DOM.preview.style.display = 'none'; 
+                    DOM.preview.style.display = 'none';
                     DOM.preview.classList.add('hidden');
                     this.hideStatus();
                     this.updateProgress(0);
@@ -249,7 +245,10 @@
             };
 
             const Logic = {
-                // ==== NOVAS FUNÇÕES MATEMÁTICAS INSERIDAS ====
+
+                // ─────────────────────────────────────────────────────────────
+                //  MÓDULO 10 E MÓDULO 11  (lógica matemática — sem alterações)
+                // ─────────────────────────────────────────────────────────────
                 modulo10(num) {
                     let soma = 0, mult = 2;
                     for (let i = num.length - 1; i >= 0; i--) {
@@ -260,7 +259,7 @@
                     const resto = soma % 10;
                     return resto === 0 ? 0 : 10 - resto;
                 },
-                
+
                 modulo11(num, base = 9) {
                     let soma = 0, mult = 2;
                     for (let i = num.length - 1; i >= 0; i--) {
@@ -271,38 +270,103 @@
                     if (resto === 0 || resto === 1) return (base === 9) ? 1 : 0;
                     return 11 - resto;
                 },
-                
-                // Validador de Chave
+
+                // ─────────────────────────────────────────────────────────────
+                //  VALIDADOR DE BOLETO
+                //
+                //  FIX #1 — Novo bloco para código de barras físico (44 dígitos).
+                //           Identifica pelo dígito de moeda '9' na posição 3 e
+                //           aplica módulo 11 nos 43 dígitos sem o DV.
+                //
+                //  FIX #3 — DV geral agora aceita 0 ou 1 quando o calculado
+                //           retorna 1 (tolerância para CEF e emissores similares).
+                // ─────────────────────────────────────────────────────────────
                 validarBoleto(chave) {
-                    // Boleto Bancário Padrão
+
+                    // --- FIX #1: Código de barras bancário (44 dígitos) ---
+                    if (chave.length === 44) {
+                        // Somente processa se o código de moeda (pos 3) for '9'
+                        if (chave[3] !== '9') return false;
+                        const dvGeral     = parseInt(chave[4]);
+                        const semDV       = chave.substring(0, 4) + chave.substring(5); // 43 dígitos
+                        const dvCalculado = this.modulo11(semDV, 9);
+                        // FIX #3: tolerância DV 0 ou 1
+                        return dvCalculado === dvGeral ||
+                               ((dvCalculado === 0 || dvCalculado === 1) && (dvGeral === 0 || dvGeral === 1));
+                    }
+
+                    // --- Linha digitável bancária (47 dígitos) ---
                     if (chave.length === 47) {
-                        const c1 = chave.substring(0, 9), dv1 = parseInt(chave[9]);
+                        const c1 = chave.substring(0, 9),  dv1 = parseInt(chave[9]);
                         const c2 = chave.substring(10, 20), dv2 = parseInt(chave[20]);
                         const c3 = chave.substring(21, 31), dv3 = parseInt(chave[31]);
-                        const cb = chave.substring(0, 4) + chave.substring(33, 47) + chave.substring(4, 9) + chave.substring(10, 20) + chave.substring(21, 31);
                         const dvGeral = parseInt(chave[32]);
-                        
-                        return (this.modulo10(c1) === dv1) && 
-                               (this.modulo10(c2) === dv2) && 
-                               (this.modulo10(c3) === dv3) && 
-                               (this.modulo11(cb, 9) === dvGeral);
-                    } 
-                    // Contas de Consumo e Convênios
-                    else if (chave.length === 48) {
-                        const s1 = chave.substring(0, 11), dv1 = parseInt(chave[11]);
+                        const cb = chave.substring(0, 4)
+                                 + chave.substring(33, 47)
+                                 + chave.substring(4, 9)
+                                 + chave.substring(10, 20)
+                                 + chave.substring(21, 31);
+                        const dvCalculado = this.modulo11(cb, 9);
+                        // FIX #3: tolerância DV 0 ou 1
+                        const dvGeralOk = dvCalculado === dvGeral ||
+                                          ((dvCalculado === 0 || dvCalculado === 1) && (dvGeral === 0 || dvGeral === 1));
+                        return (this.modulo10(c1) === dv1) &&
+                               (this.modulo10(c2) === dv2) &&
+                               (this.modulo10(c3) === dv3) &&
+                               dvGeralOk;
+                    }
+
+                    // --- Linha digitável: contas de consumo / convênios (48 dígitos) ---
+                    if (chave.length === 48) {
+                        const s1 = chave.substring(0, 11),  dv1 = parseInt(chave[11]);
                         const s2 = chave.substring(12, 23), dv2 = parseInt(chave[23]);
                         const s3 = chave.substring(24, 35), dv3 = parseInt(chave[35]);
                         const s4 = chave.substring(36, 47), dv4 = parseInt(chave[47]);
-                        
-                        return (this.modulo10(s1) === dv1) && 
-                               (this.modulo10(s2) === dv2) && 
-                               (this.modulo10(s3) === dv3) && 
+                        return (this.modulo10(s1) === dv1) &&
+                               (this.modulo10(s2) === dv2) &&
+                               (this.modulo10(s3) === dv3) &&
                                (this.modulo10(s4) === dv4);
                     }
+
                     return false;
                 },
 
-                // ==== FIM DAS FUNÇÕES MATEMÁTICAS ====
+                // ─────────────────────────────────────────────────────────────
+                //  CLASSIFY
+                //
+                //  FIX #1 — Para 44 dígitos, tenta validar como boleto de
+                //           código de barras ANTES de assumir NFe.
+                // ─────────────────────────────────────────────────────────────
+                classify(num) {
+                    const clean = num.replace(/\D/g, '');
+                    const len   = clean.length;
+                    let label   = '';
+
+                    if (len === 47 || len === 48) {
+                        const isValido = this.validarBoleto(clean);
+                        label = isValido ? 'BOLETO (VÁLIDO ✅)' : 'BOLETO (INVÁLIDO ❌)';
+                    } else if (len === 44) {
+                        // FIX #1: verifica se é boleto de código de barras (moeda '9')
+                        // antes de assumir que é uma chave de NFe
+                        const isBoletoCB = this.validarBoleto(clean);
+                        label = isBoletoCB ? 'BOLETO CBARRAS (VÁLIDO ✅)' : 'NFe';
+                    } else if (len === 14) {
+                        label = 'CNPJ';
+                    } else if (len === 11) {
+                        label = 'CPF';
+                    }
+
+                    return label ? `${num}   | ${label}` : num;
+                },
+
+                // ─────────────────────────────────────────────────────────────
+                //  FIX #4 — Helper centralizado para remover etiquetas.
+                //           Evita que números das etiquetas (ex: "10" de
+                //           "VÁLIDO") gerem entradas espúrias ao re-classificar.
+                // ─────────────────────────────────────────────────────────────
+                stripLabels(text) {
+                    return text.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)/g, '');
+                },
 
                 async copyToClipboard(text) {
                     if (!text || !text.trim()) return false;
@@ -310,7 +374,7 @@
                         await navigator.clipboard.writeText(text);
                         return true;
                     } catch (err) {
-                        const textArea = document.createElement("textarea");
+                        const textArea = document.createElement('textarea');
                         textArea.value = text;
                         document.body.appendChild(textArea);
                         textArea.select();
@@ -319,6 +383,7 @@
                         return success;
                     }
                 },
+
                 getHistory() { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
                 saveHistory(text) {
                     if (!text.trim()) return;
@@ -328,16 +393,17 @@
                     history = history.slice(0, 5);
                     localStorage.setItem('ocrHistory', JSON.stringify(history));
                 },
+
                 getRotatedImageBlob() {
                     return new Promise((resolve) => {
                         const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        const img = new Image();
+                        const ctx    = canvas.getContext('2d');
+                        const img    = new Image();
                         img.onload = () => {
                             const rad = (AppState.rotation.current * Math.PI) / 180;
                             const sin = Math.abs(Math.sin(rad));
                             const cos = Math.abs(Math.cos(rad));
-                            canvas.width = img.width * cos + img.height * sin;
+                            canvas.width  = img.width * cos + img.height * sin;
                             canvas.height = img.width * sin + img.height * cos;
                             ctx.translate(canvas.width / 2, canvas.height / 2);
                             ctx.rotate(rad);
@@ -346,28 +412,6 @@
                         };
                         img.src = AppState.rotation.originalData;
                     });
-                },
-                
-                // Modificamos esta função para fazer o uso das matemáticas
-                classify(num) {
-                    const clean = num.replace(/\D/g, '');
-                    const len = clean.length;
-                    let label = '';
-                    
-                    // Se o tamanho bater com um boleto, ele pede pro validador fazer a matemática
-                    if (len === 47 || len === 48) {
-                        const isValido = this.validarBoleto(clean);
-                        // Atribui uma etiqueta dependendo do resultado da matemática
-                        label = isValido ? 'BOLETO (VÁLIDO ✅)' : 'BOLETO (INVÁLIDO ❌)';
-                    }
-                    else if (len === 44) label = 'NFe';
-                    else if (len === 14) label = 'CNPJ';
-                    else if (len === 11) label = 'CPF';
-                    
-                    if (label) {
-                        return `${num}   | ${label}`;
-                    }
-                    return num;
                 }
             };
 
@@ -387,15 +431,15 @@
                         Extractor.finalize();
                     }
                 },
-                hide() { DOM.rotationModal.classList.add('hidden'); },
+                hide()  { DOM.rotationModal.classList.add('hidden'); },
                 update() {
                     DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
-                    DOM.angleDisplay.textContent = `${AppState.rotation.current.toFixed(1)}°`;
-                    DOM.rotationSlider.value = AppState.rotation.current;
+                    DOM.angleDisplay.textContent       = `${AppState.rotation.current.toFixed(1)}°`;
+                    DOM.rotationSlider.value           = AppState.rotation.current;
                 },
                 adjust(angle) {
                     let newAngle = AppState.rotation.current + angle;
-                    if (newAngle > 180) newAngle = 180;
+                    if (newAngle >  180) newAngle =  180;
                     if (newAngle < -180) newAngle = -180;
                     AppState.rotation.current = newAngle;
                     this.update();
@@ -408,95 +452,118 @@
 
             const Extractor = {
                 start(files) {
-                    AppState.extraction.queue = Array.from(files);
-                    AppState.extraction.totalFiles = files.length;
+                    AppState.extraction.queue          = Array.from(files);
+                    AppState.extraction.totalFiles     = files.length;
                     AppState.extraction.processedFiles = 0;
                     UI.clearAll();
                     Rotator.showNext();
                 },
+
                 async processCurrentImage(rotatedBlob) {
-                    const file = new File([rotatedBlob], "processed.png", { type: 'image/png' });
+                    const file = new File([rotatedBlob], 'processed.png', { type: 'image/png' });
                     AppState.extraction.processedFiles++;
-                    const progressText = AppState.extraction.totalFiles > 1 ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})` : '';
+                    const progressText = AppState.extraction.totalFiles > 1
+                        ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})`
+                        : '';
                     UI.showStatus(`A processar ${progressText}...`, 'processing');
-                    
+
                     const imageURL = URL.createObjectURL(file);
-                    
+
                     try {
                         const preprocessedImage = await this.preprocessImage(imageURL);
                         let resultFound = false;
 
-                        // Tentar Código de Barras (ZXing)
+                        // --- Tentativa 1: Código de Barras via ZXing ---
                         try {
                             const codeReader = new ZXing.BrowserMultiFormatReader();
-                            const result = await codeReader.decodeFromImageUrl(preprocessedImage);
+                            const result     = await codeReader.decodeFromImageUrl(preprocessedImage);
                             if (result?.getText()) {
                                 const text = result.getText();
                                 DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(text);
                                 resultFound = true;
                             }
-                        } catch (err) {}
-                        
-                        // Tentar OCR (Tesseract)
-                        if (!resultFound) { 
+                        } catch (err) { /* nenhum código de barras encontrado */ }
+
+                        // --- Tentativa 2: OCR via Tesseract ---
+                        if (!resultFound) {
                             UI.showStatus(`🔍 Lendo texto... ${progressText}`, 'processing');
                             const worker = await Tesseract.createWorker({
                                 logger: m => {
-                                    if (m.status === 'recognizing text') UI.updateProgress(50 + Math.round(m.progress * 50));
+                                    if (m.status === 'recognizing text')
+                                        UI.updateProgress(50 + Math.round(m.progress * 50));
                                 }
                             });
                             await worker.loadLanguage('por');
                             await worker.initialize('por');
-                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' }); 
-                            
+                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' });
+
                             const { data } = await worker.recognize(preprocessedImage);
                             await worker.terminate();
 
-                            const numeros = data.text.match(/\d+/g);
-                            if (numeros?.length > 0) {
-                                const uniqueNumbers = [...new Set(numeros)];
-                                const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
+                            // ─────────────────────────────────────────────────
+                            //  FIX #2 — Tenta a sequência COMPLETA de dígitos
+                            //  primeiro. Resolve a fragmentação que ocorre quando
+                            //  o OCR lê uma linha digitável com espaços/pontos
+                            //  (ex: "34191 75617..." → fragmentos de 5 dígitos).
+                            // ─────────────────────────────────────────────────
+                            const allDigits = data.text.replace(/\D/g, '');
+
+                            if (allDigits.length === 47 || allDigits.length === 48) {
+                                // Tamanho exato de linha digitável — classifica direto
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(allDigits);
                                 resultFound = true;
+                            } else if (allDigits.length === 44) {
+                                // Pode ser código de barras ou NFe — classify decide
+                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(allDigits);
+                                resultFound = true;
+                            } else {
+                                // Fallback: fragmentos individuais (CPF, CNPJ, outros)
+                                const numeros = data.text.match(/\d+/g);
+                                if (numeros?.length > 0) {
+                                    const uniqueNumbers     = [...new Set(numeros)];
+                                    const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
+                                    DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
+                                    resultFound = true;
+                                }
                             }
                         }
 
                         if (!resultFound) {
-                            UI.showStatus(`⚠️ Nada encontrado nesta imagem.`, 'error');
+                            UI.showStatus('⚠️ Nada encontrado nesta imagem.', 'error');
                         }
 
                     } catch (error) {
                         console.error('Erro:', error);
-                        UI.showStatus(`❌ Erro ao processar.`, 'error');
+                        UI.showStatus('❌ Erro ao processar.', 'error');
                     } finally {
                         URL.revokeObjectURL(imageURL);
                         UI.updateProgress(100);
                         Rotator.showNext();
                     }
                 },
+
                 finalize() {
                     if (DOM.output.value.trim()) {
-                        UI.showStatus(`✅ Concluído!`, 'success');
+                        UI.showStatus('✅ Concluído!', 'success');
                         Logic.saveHistory(DOM.output.value);
                         UI.renderHistory(Logic.getHistory());
                     }
                     UI.updateCharCounter();
                 },
+
                 preprocessImage(imageSource) {
                     return new Promise((resolve, reject) => {
                         const img = new Image();
-                        img.crossOrigin = "Anonymous";
+                        img.crossOrigin = 'Anonymous';
                         img.onload = () => {
                             const canvas = DOM.preview;
-                            const ctx = canvas.getContext('2d');
-                            canvas.width = img.width;
+                            const ctx    = canvas.getContext('2d');
+                            canvas.width  = img.width;
                             canvas.height = img.height;
-                            ctx.filter = 'grayscale(1) contrast(1.5)';
+                            ctx.filter    = 'grayscale(1) contrast(1.5)';
                             ctx.drawImage(img, 0, 0);
-                            
                             canvas.classList.remove('hidden');
                             canvas.style.display = 'block';
-
                             resolve(canvas.toDataURL('image/png'));
                         };
                         img.onerror = reject;
@@ -504,35 +571,47 @@
                     });
                 }
             };
-            
+
             const Events = {
                 setup() {
                     const handleImageFiles = (files) => {
                         const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
                         if (imageFiles.length > 0) Extractor.start(imageFiles);
                     };
-                    
+
                     document.addEventListener('paste', e => {
                         if (!DOM.rotationModal.classList.contains('hidden')) return;
-                        const imageFile = [...(e.clipboardData?.items || [])].map(i => i.getAsFile()).find(f => f?.type.startsWith('image/'));
+                        const imageFile = [...(e.clipboardData?.items || [])]
+                            .map(i => i.getAsFile())
+                            .find(f => f?.type.startsWith('image/'));
                         if (imageFile) { e.preventDefault(); Extractor.start([imageFile]); }
                     });
 
-                    DOM.pasteArea.addEventListener('click', () => DOM.fileInput.click());
-                    DOM.pasteArea.addEventListener('dragover', e => { e.preventDefault(); DOM.pasteArea.classList.add('border-indigo-500'); });
-                    DOM.pasteArea.addEventListener('dragleave', () => DOM.pasteArea.classList.remove('border-indigo-500'));
-                    DOM.pasteArea.addEventListener('drop', e => { e.preventDefault(); DOM.pasteArea.classList.remove('border-indigo-500'); if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files); });
-                    DOM.fileInput.addEventListener('change', e => { if (e.target.files.length > 0) handleImageFiles(e.target.files); });
+                    DOM.pasteArea.addEventListener('click',     () => DOM.fileInput.click());
+                    DOM.pasteArea.addEventListener('dragover',  e  => { e.preventDefault(); DOM.pasteArea.classList.add('border-indigo-500'); });
+                    DOM.pasteArea.addEventListener('dragleave', ()  => DOM.pasteArea.classList.remove('border-indigo-500'));
+                    DOM.pasteArea.addEventListener('drop', e => {
+                        e.preventDefault();
+                        DOM.pasteArea.classList.remove('border-indigo-500');
+                        if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files);
+                    });
+                    DOM.fileInput.addEventListener('change', e => {
+                        if (e.target.files.length > 0) handleImageFiles(e.target.files);
+                    });
 
+                    // ─────────────────────────────────────────────────────────
+                    //  FIX #4 — Remove etiquetas antes de re-classificar para
+                    //  evitar que "10" de "VÁLIDO ✅" vire uma entrada espúria.
+                    // ─────────────────────────────────────────────────────────
                     DOM.cleanJoinBtn.addEventListener('click', () => {
                         const raw = DOM.output.value;
                         if (raw.trim()) {
-                            const nums = raw.match(/\d+/g) || [];
-                            const unique = [...new Set(nums)];
-                            const classified = unique.map(n => Logic.classify(n));
-                            DOM.output.value = classified.join('\n');
+                            const semEtiquetas = Logic.stripLabels(raw);
+                            const nums         = semEtiquetas.match(/\d+/g) || [];
+                            const unique       = [...new Set(nums)];
+                            const classified   = unique.map(n => Logic.classify(n));
+                            DOM.output.value   = classified.join('\n');
                             UI.updateCharCounter();
-                            
                             const btn = DOM.cleanJoinBtn;
                             const originalHTML = btn.innerHTML;
                             btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
@@ -541,40 +620,49 @@
                     });
 
                     DOM.copyBtn.addEventListener('click', async () => {
-                        const rawContent = DOM.output.value;
-                        // O Regex agora remove inclusive as marcações "VÁLIDO ✅" ou "INVÁLIDO ❌" para copiar limpo
-                        const cleanContent = rawContent.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)/g, '');
-                        
-                        const success = await Logic.copyToClipboard(cleanContent);
-                        if(success) {
+                        // FIX #4: usa stripLabels (helper centralizado)
+                        const cleanContent = Logic.stripLabels(DOM.output.value);
+                        const success      = await Logic.copyToClipboard(cleanContent);
+                        if (success) {
                             const btn = DOM.copyBtn;
                             const originalHTML = btn.innerHTML;
                             btn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
                             btn.classList.replace('bg-blue-600', 'bg-green-600');
-                            setTimeout(() => { btn.innerHTML = originalHTML; btn.classList.replace('bg-green-600', 'bg-blue-600'); }, 2000);
+                            setTimeout(() => {
+                                btn.innerHTML = originalHTML;
+                                btn.classList.replace('bg-green-600', 'bg-blue-600');
+                            }, 2000);
                         }
                     });
-                    
-                    DOM.clearBtn.addEventListener('click', () => UI.clearAll());
+
+                    DOM.clearBtn.addEventListener('click',    () => UI.clearAll());
                     DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
-                    DOM.output.addEventListener('input', () => UI.updateCharCounter());
-                    
-                    DOM.rotationSlider.addEventListener('input', (e) => {
-                         AppState.rotation.current = parseFloat(e.target.value);
-                         Rotator.update();
+                    DOM.output.addEventListener('input',      () => UI.updateCharCounter());
+
+                    DOM.rotationSlider.addEventListener('input', e => {
+                        AppState.rotation.current = parseFloat(e.target.value);
+                        Rotator.update();
                     });
-                    DOM.resetRotationBtn.addEventListener('click', () => { 
-                        if(DOM.resetRotationBtn.dataset.angle) Rotator.adjust(0); 
-                        else Rotator.reset(); 
+
+                    // ─────────────────────────────────────────────────────────
+                    //  FIX #5 — A condição original avaliava a string "0" como
+                    //  truthy, bloqueando Rotator.reset(). Agora usa parseFloat.
+                    // ─────────────────────────────────────────────────────────
+                    DOM.resetRotationBtn.addEventListener('click', () => {
+                        const angle = parseFloat(DOM.resetRotationBtn.dataset.angle);
+                        if (angle !== 0) Rotator.adjust(angle);
+                        else Rotator.reset();
                     });
-                    DOM.closeModalBtn.addEventListener('click', () => { Rotator.hide(); AppState.extraction.queue = []; });
-                    DOM.cancelRotationBtn.addEventListener('click', () => DOM.closeModalBtn.click());
+
+                    DOM.closeModalBtn.addEventListener('click',     () => { Rotator.hide(); AppState.extraction.queue = []; });
+                    DOM.cancelRotationBtn.addEventListener('click',  () => DOM.closeModalBtn.click());
+
                     DOM.quickBtns.forEach(btn => btn.addEventListener('click', e => {
                         const angle = parseFloat(e.currentTarget.dataset.angle);
-                        if(angle === 0) Rotator.reset();
+                        if (angle === 0) Rotator.reset();
                         else Rotator.adjust(angle);
                     }));
-                    
+
                     DOM.confirmRotationBtn.addEventListener('click', async () => {
                         Rotator.hide();
                         const rotatedBlob = await Logic.getRotatedImageBlob();
@@ -584,24 +672,23 @@
                     DOM.linkButtons.forEach(button => {
                         button.addEventListener('click', async (e) => {
                             e.preventDefault();
-                            const el = e.currentTarget;
-                            const pattern = el.dataset.pattern;
-                            const text = DOM.output.value;
-                            const cleanText = text.replace(/\D/g, ''); 
-                            const match = cleanText.match(new RegExp(pattern));
-                            
+                            const el        = e.currentTarget;
+                            const pattern   = el.dataset.pattern;
+                            const text      = DOM.output.value;
+                            const cleanText = text.replace(/\D/g, '');
+                            const match     = cleanText.match(new RegExp(pattern));
                             if (match) {
                                 window.open(el.href, '_blank');
                                 await Logic.copyToClipboard(match[0]);
                                 UI.showStatus(`✅ Copiado: ${match[0]}`, 'success');
                             } else {
-                                UI.showStatus(`⚠️ Padrão não encontrado no texto extraído.`, 'error');
+                                UI.showStatus('⚠️ Padrão não encontrado no texto extraído.', 'error');
                             }
                         });
                     });
                 }
             };
-            
+
             UI.init();
             Events.setup();
             UI.loadTheme();
