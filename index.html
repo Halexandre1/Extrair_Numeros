@@ -7,693 +7,719 @@
     <meta name="description" content="Ferramenta de OCR e extração de códigos de barras com validação automática de boletos.">
     <meta name="author" content="HAlexandre">
     <meta name="theme-color" content="#4f46e5">
-
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
-
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
-    
     <script>
         tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 500: '#6366f1', 600: '#4f46e5' } }
-                }
-            }
+            darkMode: "class",
+            theme: { extend: { fontFamily: { sans: ["Inter","sans-serif"] }, colors: { brand: { 500:"#6366f1", 600:"#4f46e5" } } } }
         }
     </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; transition: background-color 0.3s, color 0.3s; }
-        .progress-fill { transition: width 0.3s ease-in-out; }
-        .rotation-modal { backdrop-filter: blur(5px); }
-        .rotation-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 5px; background: #e2e8f0; outline: none; margin-bottom: 15px; }
-        .dark .rotation-slider { background: #4a5568; }
-        .rotation-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(45deg, #667eea, #764ba2); cursor: pointer; box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3); transition: all 0.3s ease; }
-        .rotation-slider::-webkit-slider-thumb:hover { transform: scale(1.2); }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
+        body { font-family:"Inter",sans-serif; transition:background-color .3s,color .3s; }
+        .progress-fill { transition:width .3s ease-in-out; }
+        .rotation-modal { backdrop-filter:blur(5px); }
+        .rotation-slider { -webkit-appearance:none; width:100%; height:8px; border-radius:5px; background:#e2e8f0; outline:none; margin-bottom:15px; }
+        .dark .rotation-slider { background:#4a5568; }
+        .rotation-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%; background:linear-gradient(45deg,#667eea,#764ba2); cursor:pointer; box-shadow:0 2px 10px rgba(102,126,234,.3); transition:all .3s ease; }
+        .rotation-slider::-webkit-slider-thumb:hover { transform:scale(1.2); }
+        ::-webkit-scrollbar { width:8px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
+        .dark ::-webkit-scrollbar-thumb { background:#475569; }
+        /* ═══ PAINEL DE RESUMO ═══ */
+        .summary-wrapper { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #e2e8f0; }
+        .dark .summary-wrapper { border-top-color:#334155; }
+        .summary-title { font-size:.75rem; font-weight:700; color:#64748b; letter-spacing:.06em; text-transform:uppercase; margin-bottom:.6rem; }
+        .dark .summary-title { color:#94a3b8; }
+        .summary-cards { display:flex; flex-direction:column; gap:.6rem; }
+        .summary-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; padding:.85rem 1rem; }
+        .dark .summary-card { background:#0f172a; border-color:#1e293b; }
+        .summary-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.62rem; font-weight:800; padding:.22rem .55rem; border-radius:9999px; letter-spacing:.07em; text-transform:uppercase; margin-bottom:.65rem; }
+        .summary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.4rem; }
+        @media(max-width:500px){ .summary-grid{ grid-template-columns:1fr; } }
+        .summary-field { background:#fff; border:1px solid #f1f5f9; border-radius:.45rem; padding:.4rem .65rem; }
+        .dark .summary-field { background:#1e293b; border-color:#334155; }
+        .summary-field.span2 { grid-column:1/-1; }
+        .summary-label { display:block; font-size:.62rem; color:#94a3b8; margin-bottom:.15rem; }
+        .summary-value { display:block; font-size:.78rem; font-weight:600; color:#1e293b; word-break:break-all; }
+        .dark .summary-value { color:#e2e8f0; }
+        .badge-boleto   { background:#dbeafe; color:#1d4ed8; }
+        .dark .badge-boleto   { background:#1e3a5f; color:#93c5fd; }
+        .badge-nfe      { background:#dcfce7; color:#15803d; }
+        .dark .badge-nfe      { background:#14532d; color:#86efac; }
+        .badge-convenio { background:#fef3c7; color:#b45309; }
+        .dark .badge-convenio { background:#451a03; color:#fcd34d; }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center min-h-screen p-4">
-
-    <div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
-        <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
-
-        <header class="text-center mb-6 flex items-center justify-center gap-4">
-            <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logótipo" class="w-12 h-12 rounded-full object-cover shadow-md">
-            <div class="text-left">
-                <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Extrator e Editor PRO</h2>
-                <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Cole, rotacione e extraia números com validação de boletos.</p>
-            </div>
-        </header>
-
-        <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all group">
-            <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3 group-hover:text-indigo-500 transition-colors"></i>
-            <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste imagens</p>
-            <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
-            <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
-                <i class="fas fa-upload mr-2"></i> Selecionar Ficheiros
-            </label>
-            <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+<div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
+    <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
+    <header class="text-center mb-6 flex items-center justify-center gap-4">
+        <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logo" class="w-12 h-12 rounded-full object-cover shadow-md">
+        <div class="text-left">
+            <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Extrator e Editor PRO</h2>
+            <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Cole, rotacione e extraia números com validação de boletos.</p>
         </div>
-
-        <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
-        <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
-            <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width: 0%"></div>
-        </div>
-
-        <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md border border-slate-200 dark:border-slate-600 hidden"></canvas>
-
-        <div class="mt-6">
-            <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
-            <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner" placeholder="Os números extraídos aparecerão aqui..."></textarea>
-            <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
-        </div>
-
-        <div class="flex flex-wrap justify-center gap-3 mt-4">
-            <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Mantém apenas números e classifica"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
-            <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Copia APENAS os números (sem as etiquetas)"><i class="fas fa-copy mr-2"></i>Copiar Números</button>
-            <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
-        </div>
-        
-        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
-             <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
-             <div class="flex flex-wrap justify-center gap-3">
-               <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
-               <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="Simples Nacional" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
-               <a href="https://consultadanfe.com/" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
-             </div>
-        </div>
-        <div class="mt-8">
-             <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
-             <div id="historyContainer" class="space-y-2"></div>
-        </div>
-
-        <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
+    </header>
+    <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all group">
+        <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3 group-hover:text-indigo-500 transition-colors"></i>
+        <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste imagens</p>
+        <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
+        <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
+            <i class="fas fa-upload mr-2"></i> Selecionar Ficheiros
+        </label>
+        <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
     </div>
-
-    <!-- Modal de Rotação -->
-    <div id="rotationModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
-            <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Fechar">&times;</button>
-            <h3 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-4">Ajustar Rotação da Imagem</h3>
-            <div class="image-container mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg flex justify-center">
-                <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 ease-in-out rounded-md" alt="Imagem para rotacionar">
+    <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
+    <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
+        <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width:0%"></div>
+    </div>
+    <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md border border-slate-200 dark:border-slate-600 hidden"></canvas>
+    <div class="mt-6">
+        <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
+        <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner" placeholder="Os números extraídos aparecerão aqui..."></textarea>
+        <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
+    </div>
+    <!-- PAINEL DE RESUMO AUTOMÁTICO -->
+    <div id="summaryPanel" class="hidden"></div>
+    <div class="flex flex-wrap justify-center gap-3 mt-4">
+        <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
+        <button id="copyBtn"      class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-copy mr-2"></i>Copiar Números</button>
+        <button id="clearBtn"     class="bg-red-600  hover:bg-red-700  text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+    </div>
+    <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
+        <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
+        <div class="flex flex-wrap justify-center gap-3">
+            <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
+            <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="Simples Nacional" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
+            <a href="https://consultadanfe.com/" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
+        </div>
+    </div>
+    <div class="mt-8">
+        <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
+        <div id="historyContainer" class="space-y-2"></div>
+    </div>
+    <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
+</div>
+<!-- Modal de Rotação -->
+<div id="rotationModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
+        <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Fechar">&times;</button>
+        <h3 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-4">Ajustar Rotação da Imagem</h3>
+        <div class="image-container mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg flex justify-center">
+            <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 ease-in-out rounded-md" alt="Imagem para rotacionar">
+        </div>
+        <div class="controls mt-4 max-w-lg mx-auto">
+            <div class="control-group mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="font-semibold text-slate-700 dark:text-slate-300">Ângulo:</label>
+                    <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span>
+                </div>
+                <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
             </div>
-            <div class="controls mt-4 max-w-lg mx-auto">
-                 <div class="control-group mb-4">
-                     <div class="flex justify-between items-center mb-2">
-                        <label class="font-semibold text-slate-700 dark:text-slate-300">Ângulo:</label>
-                        <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span>
-                     </div>
-                     <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
-                 </div>
-                 <div class="quick-controls flex justify-center flex-wrap gap-2 mb-4">
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0" id="resetRotationBtn">0°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
-                     <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
-                 </div>
-                 <div class="flex justify-center gap-4">
-                     <button id="cancelRotationBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-times mr-2"></i>Cancelar</button>
-                     <button id="confirmRotationBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-green-500/30"><i class="fas fa-check mr-2"></i>Confirmar e Extrair</button>
-                 </div>
+            <div class="quick-controls flex justify-center flex-wrap gap-2 mb-4">
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0" id="resetRotationBtn">0°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
+            </div>
+            <div class="flex justify-center gap-4">
+                <button id="cancelRotationBtn"  class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-times mr-2"></i>Cancelar</button>
+                <button id="confirmRotationBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-green-500/30"><i class="fas fa-check mr-2"></i>Confirmar e Extrair</button>
             </div>
         </div>
     </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const AppState = {
+        rotation:   { current: 0, originalData: null },
+        extraction: { queue: [], totalFiles: 0, processedFiles: 0 }
+    };
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const AppState = {
-                rotation: { current: 0, originalData: null },
-                extraction: { queue: [], totalFiles: 0, processedFiles: 0 }
+    const DOM = {
+        output:           document.getElementById('output'),
+        preview:          document.getElementById('preview'),
+        pasteArea:        document.getElementById('pasteArea'),
+        fileInput:        document.getElementById('fileInput'),
+        progressBar:      document.getElementById('progressBar'),
+        progressFill:     document.getElementById('progressFill'),
+        status:           document.getElementById('status'),
+        copyBtn:          document.getElementById('copyBtn'),
+        cleanJoinBtn:     document.getElementById('cleanJoinBtn'),
+        clearBtn:         document.getElementById('clearBtn'),
+        historyContainer: document.getElementById('historyContainer'),
+        charCounter:      document.getElementById('charCounter'),
+        signature:        document.getElementById('signature'),
+        themeToggle:      document.getElementById('themeToggle'),
+        body:             document.body.parentElement,
+        summaryPanel:     document.getElementById('summaryPanel'),
+        linkButtons:      document.querySelectorAll('.link-button'),
+        rotationModal:    document.getElementById('rotationModal'),
+        rotatableImage:   document.getElementById('rotatableImage'),
+        rotationSlider:   document.getElementById('rotationSlider'),
+        angleDisplay:     document.getElementById('angleDisplay'),
+        quickBtns:        document.querySelectorAll('.quick-btn'),
+        resetRotationBtn: document.getElementById('resetRotationBtn'),
+        confirmRotationBtn:document.getElementById('confirmRotationBtn'),
+        closeModalBtn:    document.getElementById('closeModalBtn'),
+        cancelRotationBtn:document.getElementById('cancelRotationBtn'),
+    };
+
+    /* ──────────────────────────────────────────────
+       UI — interface, tema, histórico, painel resumo
+       ────────────────────────────────────────────── */
+    const UI = {
+        init() { this.loadTheme(); this.setSignature(); this.renderHistory(Logic.getHistory()); },
+        showStatus(msg, type = 'processing') {
+            const s = {
+                processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+                success:    'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+                error:      'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+            };
+            DOM.status.textContent = msg;
+            DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${s[type] || s.processing}`;
+            DOM.status.classList.remove('hidden');
+        },
+        hideStatus() { DOM.status.classList.add('hidden'); },
+        updateProgress(p) {
+            DOM.progressFill.style.width = `${p}%`;
+            DOM.progressBar.style.display = p > 0 && p < 100 ? 'block' : 'none';
+        },
+        updateCharCounter() {
+            const t = DOM.output.value;
+            const d = (t.match(/\d/g) || []).length;
+            const l = t.split('\n').filter(x => x.trim() !== '').length;
+            DOM.charCounter.textContent = `Dígitos: ${d} | Linhas: ${l}`;
+            const has = t.trim().length > 0;
+            DOM.copyBtn.disabled    = !has;
+            DOM.cleanJoinBtn.disabled = !has;
+        },
+        renderHistory(history) {
+            DOM.historyContainer.innerHTML = '';
+            if (!history.length) {
+                DOM.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
+                return;
+            }
+            history.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-700';
+                div.innerHTML = `<div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">${item.date}</div>
+                    <div class="font-mono text-xs truncate text-slate-700 dark:text-slate-300">${item.content.replace(/\n/g, ' ')}</div>`;
+                div.onclick = () => { DOM.output.value = item.content; UI.updateCharCounter(); UI.triggerSummary(); };
+                DOM.historyContainer.appendChild(div);
+            });
+        },
+        clearAll() {
+            DOM.output.value = '';
+            const ctx = DOM.preview.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
+            DOM.preview.style.display = 'none';
+            DOM.preview.classList.add('hidden');
+            this.hideStatus();
+            this.updateProgress(0);
+            this.updateCharCounter();
+            this.renderSummaryPanel([]);
+        },
+        toggleTheme() {
+            const isDark = DOM.body.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            DOM.themeToggle.innerHTML = isDark ? '<i class="fas fa-sun text-yellow-400"></i>' : '🌙';
+        },
+        loadTheme() {
+            const saved = localStorage.getItem('theme');
+            const pref  = window.matchMedia('(prefers-color-scheme:dark)').matches;
+            if (saved === 'dark' || (!saved && pref)) {
+                DOM.body.classList.add('dark');
+                DOM.themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+            } else {
+                DOM.themeToggle.innerHTML = '🌙';
+            }
+        },
+        setSignature() {
+            DOM.signature.innerHTML = `Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre &copy; ${new Date().getFullYear()}`;
+        },
+
+        /* ════════════════════════════════════════════════════
+           RENDERIZA O PAINEL DE RESUMO DETALHADO
+           Chamado após extração, edição manual e Limpar/Classificar
+           ════════════════════════════════════════════════════ */
+        renderSummaryPanel(decoded) {
+            if (!decoded || decoded.length === 0) {
+                DOM.summaryPanel.classList.add('hidden');
+                DOM.summaryPanel.innerHTML = '';
+                return;
+            }
+            const cards = decoded.map(d => {
+                const badgeClass = d.tipo.includes('NOTA')  ? 'badge-nfe'
+                                 : d.tipo.includes('CONV')  ? 'badge-convenio'
+                                 : 'badge-boleto';
+                const fields = d.campos.map((c, i) => {
+                    const last = i === d.campos.length - 1 && d.campos.length % 2 !== 0;
+                    return `<div class="summary-field${last ? ' span2' : ''}">
+                        <span class="summary-label">${c.label}</span>
+                        <span class="summary-value">${c.valor}</span>
+                    </div>`;
+                }).join('');
+                return `<div class="summary-card">
+                    <span class="summary-badge ${badgeClass}">${d.icone}&nbsp;${d.tipo}</span>
+                    <div class="summary-grid">${fields}</div>
+                </div>`;
+            }).join('');
+            DOM.summaryPanel.innerHTML = `<div class="summary-wrapper">
+                <p class="summary-title">📋 Resumo detalhado das chaves detectadas</p>
+                <div class="summary-cards">${cards}</div>
+            </div>`;
+            DOM.summaryPanel.classList.remove('hidden');
+        },
+
+        /* Lê o textarea, decodifica cada chave reconhecida e renderiza */
+        triggerSummary() {
+            const lines   = DOM.output.value.split('\n').filter(l => l.trim());
+            const results = [];
+            lines.forEach(line => {
+                const clean = line.replace(/\D/g, '');
+                const len   = clean.length;
+                if ((len === 47 || len === 48) && line.includes('BOLETO')) {
+                    const d = Logic.decodificarBoleto(clean); if (d) results.push(d);
+                } else if (len === 44 && line.includes('CBARRAS')) {
+                    const d = Logic.decodificarBoleto(clean); if (d) results.push(d);
+                } else if (len === 44 && line.includes('NFe')) {
+                    const d = Logic.decodificarNFe(clean);    if (d) results.push(d);
+                }
+            });
+            this.renderSummaryPanel(results);
+        }
+    };
+    /* ──────────────────────────────────────────────
+       LOGIC — cálculos, validações e decodificadores
+       ────────────────────────────────────────────── */
+    const Logic = {
+
+        /* ─── Módulo 10 ─── */
+        modulo10(num) {
+            let soma = 0, mult = 2;
+            for (let i = num.length - 1; i >= 0; i--) {
+                let r = parseInt(num[i]) * mult;
+                soma += r > 9 ? r - 9 : r;
+                mult  = mult === 2 ? 1 : 2;
+            }
+            const r = soma % 10;
+            return r === 0 ? 0 : 10 - r;
+        },
+
+        /* ─── Módulo 11 ─── */
+        modulo11(num, base = 9) {
+            let soma = 0, mult = 2;
+            for (let i = num.length - 1; i >= 0; i--) {
+                soma += parseInt(num[i]) * mult;
+                mult  = mult >= base ? 2 : mult + 1;
+            }
+            const r = soma % 11;
+            if (r === 0 || r === 1) return base === 9 ? 1 : 0;
+            return 11 - r;
+        },
+
+        /* ─── Validador de Boleto ─── */
+        validarBoleto(chave) {
+            if (chave.length === 44) {
+                if (chave[3] !== '9') return false;
+                const dv   = parseInt(chave[4]);
+                const sem  = chave.substring(0, 4) + chave.substring(5);
+                const calc = this.modulo11(sem, 9);
+                return calc === dv || ((calc === 0 || calc === 1) && (dv === 0 || dv === 1));
+            }
+            if (chave.length === 47) {
+                const c1 = chave.substring(0, 9),  dv1 = parseInt(chave[9]);
+                const c2 = chave.substring(10, 20), dv2 = parseInt(chave[20]);
+                const c3 = chave.substring(21, 31), dv3 = parseInt(chave[31]);
+                const dv = parseInt(chave[32]);
+                const cb = chave.substring(0, 4) + chave.substring(33, 47) +
+                           chave.substring(4, 9) + chave.substring(10, 20) + chave.substring(21, 31);
+                const calc = this.modulo11(cb, 9);
+                const ok   = calc === dv || ((calc === 0 || calc === 1) && (dv === 0 || dv === 1));
+                return this.modulo10(c1) === dv1 && this.modulo10(c2) === dv2 && this.modulo10(c3) === dv3 && ok;
+            }
+            if (chave.length === 48) {
+                return this.modulo10(chave.substring(0, 11))  === parseInt(chave[11]) &&
+                       this.modulo10(chave.substring(12, 23)) === parseInt(chave[23]) &&
+                       this.modulo10(chave.substring(24, 35)) === parseInt(chave[35]) &&
+                       this.modulo10(chave.substring(36, 47)) === parseInt(chave[47]);
+            }
+            return false;
+        },
+
+        /* ─── Classify ─── */
+        classify(num) {
+            const clean = num.replace(/\D/g, ''), len = clean.length;
+            let label = '';
+            if      (len === 47 || len === 48) { label = this.validarBoleto(clean) ? 'BOLETO (VÁLIDO ✅)' : 'BOLETO (INVÁLIDO ❌)'; }
+            else if (len === 44) { label = this.validarBoleto(clean) ? 'BOLETO CBARRAS (VÁLIDO ✅)' : 'NFe'; }
+            else if (len === 14) { label = 'CNPJ'; }
+            else if (len === 11) { label = 'CPF';  }
+            return label ? `${num}   | ${label}` : num;
+        },
+        stripLabels(text) { return text.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)/g, ''); },
+
+        /* ════════════════════════════════════
+           DICIONÁRIOS
+           ════════════════════════════════════ */
+        BANCOS: {
+            '001':'Banco do Brasil','003':'Banco da Amazônia','004':'Banco do Nordeste',
+            '033':'Santander','041':'Banrisul','047':'Banese','070':'BRB',
+            '077':'Inter','085':'Ailos / Cecred','099':'Uniprime',
+            '104':'Caixa Econômica Federal','133':'Cresol','136':'Unicred',
+            '197':'Stone','208':'BTG Pactual','212':'Banco Original','218':'BS2',
+            '237':'Bradesco','260':'Nubank','290':'PagSeguro','301':'PJBank',
+            '318':'BMG','323':'MercadoPago','336':'C6 Bank','341':'Itaú',
+            '364':'Gerencianet / Efí','380':'PicPay','389':'Mercantil do Brasil',
+            '422':'Banco Safra','623':'Banco PAN','633':'Rendimento',
+            '655':'Votorantim','707':'Daycoval','748':'Sicredi','756':'Sicoob',
+        },
+        ESTADOS: {
+            '11':'Rondônia (RO)','12':'Acre (AC)','13':'Amazonas (AM)','14':'Roraima (RR)',
+            '15':'Pará (PA)','16':'Amapá (AP)','17':'Tocantins (TO)','21':'Maranhão (MA)',
+            '22':'Piauí (PI)','23':'Ceará (CE)','24':'Rio Grande do Norte (RN)',
+            '25':'Paraíba (PB)','26':'Pernambuco (PE)','27':'Alagoas (AL)',
+            '28':'Sergipe (SE)','29':'Bahia (BA)','31':'Minas Gerais (MG)',
+            '32':'Espírito Santo (ES)','33':'Rio de Janeiro (RJ)','35':'São Paulo (SP)',
+            '41':'Paraná (PR)','42':'Santa Catarina (SC)','43':'Rio Grande do Sul (RS)',
+            '50':'Mato Grosso do Sul (MS)','51':'Mato Grosso (MT)',
+            '52':'Goiás (GO)','53':'Distrito Federal (DF)',
+        },
+
+        /* ════════════════════════════════════════════
+           DECODIFICADOR DE BOLETO
+           Extrai banco, valor e vencimento
+           ════════════════════════════════════════════ */
+        decodificarBoleto(chave) {
+            const len = chave.length;
+            const fmtR = v => v === 0
+                ? 'Não informado'
+                : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const calcVenc = fator => {
+                if (!fator) return 'Sem vencimento fixo';
+                const base = new Date(1997, 9, 7); // 07/10/1997 — data base FEBRABAN
+                base.setDate(base.getDate() + fator);
+                return base.toLocaleDateString('pt-BR');
             };
 
-            const DOM = {
-                output: document.getElementById('output'),
-                preview: document.getElementById('preview'),
-                pasteArea: document.getElementById('pasteArea'),
-                fileInput: document.getElementById('fileInput'),
-                progressBar: document.getElementById('progressBar'),
-                progressFill: document.getElementById('progressFill'),
-                status: document.getElementById('status'),
-                copyBtn: document.getElementById('copyBtn'),
-                cleanJoinBtn: document.getElementById('cleanJoinBtn'),
-                clearBtn: document.getElementById('clearBtn'),
-                historyContainer: document.getElementById('historyContainer'),
-                charCounter: document.getElementById('charCounter'),
-                signature: document.getElementById('signature'),
-                themeToggle: document.getElementById('themeToggle'),
-                body: document.body.parentElement,
-                linkButtons: document.querySelectorAll('.link-button'),
-                rotationModal: document.getElementById('rotationModal'),
-                rotatableImage: document.getElementById('rotatableImage'),
-                rotationSlider: document.getElementById('rotationSlider'),
-                angleDisplay: document.getElementById('angleDisplay'),
-                quickBtns: document.querySelectorAll('.quick-btn'),
-                resetRotationBtn: document.getElementById('resetRotationBtn'),
-                confirmRotationBtn: document.getElementById('confirmRotationBtn'),
-                closeModalBtn: document.getElementById('closeModalBtn'),
-                cancelRotationBtn: document.getElementById('cancelRotationBtn'),
-            };
+            if (len === 47) {
+                const banco = chave.substring(0, 3);
+                const fator = parseInt(chave.substring(33, 37));
+                const valor = parseInt(chave.substring(37, 47)) / 100;
+                return { icone: '💰', tipo: 'BOLETO BANCÁRIO', campos: [
+                    { label: '🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
+                    { label: '💰 Valor',          valor: fmtR(valor) },
+                    { label: '📅 Vencimento',     valor: calcVenc(fator) },
+                    { label: '📋 Formato',        valor: 'Linha Digitável (47 díg.)' },
+                ]};
+            }
+            if (len === 44) {
+                const banco = chave.substring(0, 3);
+                const fator = parseInt(chave.substring(5, 9));
+                const valor = parseInt(chave.substring(9, 19)) / 100;
+                return { icone: '💰', tipo: 'BOLETO BANCÁRIO', campos: [
+                    { label: '🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
+                    { label: '💰 Valor',          valor: fmtR(valor) },
+                    { label: '📅 Vencimento',     valor: calcVenc(fator) },
+                    { label: '📋 Formato',        valor: 'Código de Barras (44 díg.)' },
+                ]};
+            }
+            if (len === 48) {
+                const seg = chave[0], vid = chave[1];
+                const valorN   = parseInt(chave.substring(2, 13));
+                const valorFmt = ['6','7','8'].includes(vid) ? fmtR(valorN / 100) : 'Sem valor fixo';
+                const tipoSeg  = seg === '8' ? 'Arrecadação c/ CNPJ' : 'Concessionária / Convênio';
+                const vidDesc  = vid === '6' ? 'Valor em Reais' : vid === '7' ? 'Quantidade' : vid === '8' ? 'Valor de referência' : 'Sem valor';
+                return { icone: '💳', tipo: 'BOLETO CONVÊNIO', campos: [
+                    { label: '🏢 Tipo',            valor: tipoSeg },
+                    { label: '💰 Valor',            valor: valorFmt },
+                    { label: '🔢 Identificador',    valor: vidDesc },
+                ]};
+            }
+            return null;
+        },
 
-            const UI = {
-                init() {
-                    this.loadTheme();
-                    this.setSignature();
-                    this.renderHistory(Logic.getHistory());
-                },
-                showStatus(message, type = 'processing') {
-                    const styles = {
-                        processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-                        success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-                        error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-                    };
-                    DOM.status.textContent = message;
-                    DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${styles[type] || styles.processing}`;
-                    DOM.status.classList.remove('hidden');
-                },
-                hideStatus() { DOM.status.classList.add('hidden'); },
-                updateProgress(percentage) {
-                    DOM.progressFill.style.width = `${percentage}%`;
-                    DOM.progressBar.style.display = percentage > 0 && percentage < 100 ? 'block' : 'none';
-                },
-                updateCharCounter() {
-                    const text = DOM.output.value;
-                    const digitCount = (text.match(/\d/g) || []).length;
-                    const lineCount = text.split('\n').filter(line => line.trim() !== '').length;
-                    DOM.charCounter.textContent = `Dígitos: ${digitCount} | Linhas: ${lineCount}`;
-                    const hasText = text.trim().length > 0;
-                    DOM.copyBtn.disabled = !hasText;
-                    DOM.cleanJoinBtn.disabled = !hasText;
-                },
-                renderHistory(history) {
-                    DOM.historyContainer.innerHTML = '';
-                    if (history.length === 0) {
-                        DOM.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
-                        return;
+        /* ════════════════════════════════════════════
+           DECODIFICADOR DE CHAVE DE NF-e / NFC-e
+           Extrai estado, data, CNPJ, modelo, série, nº
+           ════════════════════════════════════════════ */
+        decodificarNFe(chave) {
+            if (chave.length !== 44) return null;
+            const cUF    = chave.substring(0, 2);
+            const AAMM   = chave.substring(2, 6);
+            const cnpj   = chave.substring(6, 20);
+            const mod    = chave.substring(20, 22);
+            const serie  = parseInt(chave.substring(22, 25));
+            const nNF    = parseInt(chave.substring(25, 34));
+            const tpEmis = chave[34];
+            const ano    = '20' + AAMM.substring(0, 2);
+            const mes    = parseInt(AAMM.substring(2, 4));
+            const meses  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+                            'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const cnpjFmt = cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+            const modelo  = mod === '55' ? 'NF-e (mod. 55)' : mod === '65' ? 'NFC-e / Cupom (mod. 65)' : `Modelo ${mod}`;
+            const emissoes = {
+                '1': 'Normal', '2': 'Contingência FS', '3': 'Contingência SCAN',
+                '4': 'Contingência DPEC', '5': 'Contingência FS-DA',
+                '6': 'Contingência SVC-AN', '7': 'Contingência SVC-RS',
+                '9': 'Contingência off-line (NFC-e)'
+            };
+            return { icone: '📄', tipo: 'NOTA FISCAL ELETRÔNICA', campos: [
+                { label: '🗺️ Estado emissor',  valor: this.ESTADOS[cUF] || `cUF ${cUF}` },
+                { label: '📅 Mês / Ano',        valor: `${meses[mes - 1] || mes} / ${ano}` },
+                { label: '🏢 CNPJ emissor',     valor: cnpjFmt },
+                { label: '📄 Modelo',            valor: modelo },
+                { label: '📁 Série',             valor: String(serie) },
+                { label: '🔢 Número da NF',      valor: nNF.toLocaleString('pt-BR') },
+                { label: '⚡ Tipo de emissão',   valor: emissoes[tpEmis] || `Código ${tpEmis}` },
+            ]};
+        },
+
+        /* ─── Clipboard ─── */
+        async copyToClipboard(text) {
+            if (!text || !text.trim()) return false;
+            try   { await navigator.clipboard.writeText(text); return true; }
+            catch {
+                const a = document.createElement('textarea');
+                a.value = text; document.body.appendChild(a); a.select();
+                const ok = document.execCommand('copy'); document.body.removeChild(a);
+                return ok;
+            }
+        },
+        getHistory()       { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
+        saveHistory(text)  {
+            if (!text.trim()) return;
+            let h = this.getHistory();
+            if (h.length > 0 && h[0].content === text) return;
+            h.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
+            localStorage.setItem('ocrHistory', JSON.stringify(h.slice(0, 5)));
+        },
+        getRotatedImageBlob() {
+            return new Promise(resolve => {
+                const c = document.createElement('canvas'), ctx = c.getContext('2d'), img = new Image();
+                img.onload = () => {
+                    const rad = (AppState.rotation.current * Math.PI) / 180;
+                    const sin = Math.abs(Math.sin(rad)), cos = Math.abs(Math.cos(rad));
+                    c.width  = img.width * cos + img.height * sin;
+                    c.height = img.width * sin + img.height * cos;
+                    ctx.translate(c.width / 2, c.height / 2);
+                    ctx.rotate(rad);
+                    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                    c.toBlob(resolve, 'image/png');
+                };
+                img.src = AppState.rotation.originalData;
+            });
+        }
+    };
+    /* ──────────────────────────────────────────────
+       ROTATOR — modal de ajuste de ângulo
+       ────────────────────────────────────────────── */
+    const Rotator = {
+        showNext() {
+            const file = AppState.extraction.queue.shift();
+            if (file) {
+                const r = new FileReader();
+                r.onload = e => {
+                    AppState.rotation.originalData = e.target.result;
+                    DOM.rotatableImage.src = e.target.result;
+                    this.reset();
+                    DOM.rotationModal.classList.remove('hidden');
+                };
+                r.readAsDataURL(file);
+            } else {
+                Extractor.finalize();
+            }
+        },
+        hide()   { DOM.rotationModal.classList.add('hidden'); },
+        update() {
+            DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
+            DOM.angleDisplay.textContent       = `${AppState.rotation.current.toFixed(1)}°`;
+            DOM.rotationSlider.value           = AppState.rotation.current;
+        },
+        adjust(a) {
+            let n = AppState.rotation.current + a;
+            if (n >  180) n =  180;
+            if (n < -180) n = -180;
+            AppState.rotation.current = n;
+            this.update();
+        },
+        reset() { AppState.rotation.current = 0; this.update(); }
+    };
+
+    /* ──────────────────────────────────────────────
+       EXTRACTOR — OCR + leitor de código de barras
+       ────────────────────────────────────────────── */
+    const Extractor = {
+        start(files) {
+            AppState.extraction.queue          = Array.from(files);
+            AppState.extraction.totalFiles     = files.length;
+            AppState.extraction.processedFiles = 0;
+            UI.clearAll();
+            Rotator.showNext();
+        },
+        async processCurrentImage(blob) {
+            const file = new File([blob], 'processed.png', { type: 'image/png' });
+            AppState.extraction.processedFiles++;
+            const pt = AppState.extraction.totalFiles > 1
+                ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})` : '';
+            UI.showStatus(`A processar ${pt}...`, 'processing');
+            const url = URL.createObjectURL(file);
+            try {
+                const pre = await this.preprocessImage(url);
+                let found = false;
+                try {
+                    const cr  = new ZXing.BrowserMultiFormatReader();
+                    const res = await cr.decodeFromImageUrl(pre);
+                    if (res?.getText()) {
+                        DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(res.getText());
+                        found = true;
                     }
-                    history.forEach(item => {
-                        const div = document.createElement('div');
-                        div.className = 'bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-700';
-                        div.innerHTML = `<div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">${item.date}</div><div class="font-mono text-xs truncate text-slate-700 dark:text-slate-300">${item.content.replace(/\n/g, ' ')}</div>`;
-                        div.onclick = () => {
-                            DOM.output.value = item.content;
-                            UI.updateCharCounter();
-                        };
-                        DOM.historyContainer.appendChild(div);
-                    });
-                },
-                clearAll() {
-                    DOM.output.value = '';
-                    const ctx = DOM.preview.getContext('2d');
-                    if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
-                    DOM.preview.style.display = 'none';
-                    DOM.preview.classList.add('hidden');
-                    this.hideStatus();
-                    this.updateProgress(0);
-                    this.updateCharCounter();
-                },
-                toggleTheme() {
-                    const isDark = DOM.body.classList.toggle('dark');
-                    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-                    DOM.themeToggle.innerHTML = isDark ? '<i class="fas fa-sun text-yellow-400"></i>' : '🌙';
-                },
-                loadTheme() {
-                    const savedTheme = localStorage.getItem('theme');
-                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
-                        DOM.body.classList.add('dark');
-                        DOM.themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+                } catch {}
+                if (!found) {
+                    UI.showStatus(`🔍 Lendo texto... ${pt}`, 'processing');
+                    const w = await Tesseract.createWorker({ logger: m => {
+                        if (m.status === 'recognizing text') UI.updateProgress(50 + Math.round(m.progress * 50));
+                    }});
+                    await w.loadLanguage('por'); await w.initialize('por');
+                    await w.setParameters({ tessedit_char_whitelist: '0123456789' });
+                    const { data } = await w.recognize(pre); await w.terminate();
+                    /* tenta sequência completa antes de fragmentar */
+                    const all = data.text.replace(/\D/g, '');
+                    if (all.length === 47 || all.length === 48 || all.length === 44) {
+                        DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(all);
+                        found = true;
                     } else {
-                        DOM.themeToggle.innerHTML = '🌙';
-                    }
-                },
-                setSignature() {
-                    DOM.signature.innerHTML = `Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre © ${new Date().getFullYear()}`;
-                }
-            };
-
-            const Logic = {
-
-                // ─────────────────────────────────────────────────────────────
-                //  MÓDULO 10 E MÓDULO 11  (lógica matemática — sem alterações)
-                // ─────────────────────────────────────────────────────────────
-                modulo10(num) {
-                    let soma = 0, mult = 2;
-                    for (let i = num.length - 1; i >= 0; i--) {
-                        let r = parseInt(num[i]) * mult;
-                        soma += r > 9 ? r - 9 : r;
-                        mult = mult === 2 ? 1 : 2;
-                    }
-                    const resto = soma % 10;
-                    return resto === 0 ? 0 : 10 - resto;
-                },
-
-                modulo11(num, base = 9) {
-                    let soma = 0, mult = 2;
-                    for (let i = num.length - 1; i >= 0; i--) {
-                        soma += parseInt(num[i]) * mult;
-                        mult = mult >= base ? 2 : mult + 1;
-                    }
-                    const resto = soma % 11;
-                    if (resto === 0 || resto === 1) return (base === 9) ? 1 : 0;
-                    return 11 - resto;
-                },
-
-                // ─────────────────────────────────────────────────────────────
-                //  VALIDADOR DE BOLETO
-                //
-                //  FIX #1 — Novo bloco para código de barras físico (44 dígitos).
-                //           Identifica pelo dígito de moeda '9' na posição 3 e
-                //           aplica módulo 11 nos 43 dígitos sem o DV.
-                //
-                //  FIX #3 — DV geral agora aceita 0 ou 1 quando o calculado
-                //           retorna 1 (tolerância para CEF e emissores similares).
-                // ─────────────────────────────────────────────────────────────
-                validarBoleto(chave) {
-
-                    // --- FIX #1: Código de barras bancário (44 dígitos) ---
-                    if (chave.length === 44) {
-                        // Somente processa se o código de moeda (pos 3) for '9'
-                        if (chave[3] !== '9') return false;
-                        const dvGeral     = parseInt(chave[4]);
-                        const semDV       = chave.substring(0, 4) + chave.substring(5); // 43 dígitos
-                        const dvCalculado = this.modulo11(semDV, 9);
-                        // FIX #3: tolerância DV 0 ou 1
-                        return dvCalculado === dvGeral ||
-                               ((dvCalculado === 0 || dvCalculado === 1) && (dvGeral === 0 || dvGeral === 1));
-                    }
-
-                    // --- Linha digitável bancária (47 dígitos) ---
-                    if (chave.length === 47) {
-                        const c1 = chave.substring(0, 9),  dv1 = parseInt(chave[9]);
-                        const c2 = chave.substring(10, 20), dv2 = parseInt(chave[20]);
-                        const c3 = chave.substring(21, 31), dv3 = parseInt(chave[31]);
-                        const dvGeral = parseInt(chave[32]);
-                        const cb = chave.substring(0, 4)
-                                 + chave.substring(33, 47)
-                                 + chave.substring(4, 9)
-                                 + chave.substring(10, 20)
-                                 + chave.substring(21, 31);
-                        const dvCalculado = this.modulo11(cb, 9);
-                        // FIX #3: tolerância DV 0 ou 1
-                        const dvGeralOk = dvCalculado === dvGeral ||
-                                          ((dvCalculado === 0 || dvCalculado === 1) && (dvGeral === 0 || dvGeral === 1));
-                        return (this.modulo10(c1) === dv1) &&
-                               (this.modulo10(c2) === dv2) &&
-                               (this.modulo10(c3) === dv3) &&
-                               dvGeralOk;
-                    }
-
-                    // --- Linha digitável: contas de consumo / convênios (48 dígitos) ---
-                    if (chave.length === 48) {
-                        const s1 = chave.substring(0, 11),  dv1 = parseInt(chave[11]);
-                        const s2 = chave.substring(12, 23), dv2 = parseInt(chave[23]);
-                        const s3 = chave.substring(24, 35), dv3 = parseInt(chave[35]);
-                        const s4 = chave.substring(36, 47), dv4 = parseInt(chave[47]);
-                        return (this.modulo10(s1) === dv1) &&
-                               (this.modulo10(s2) === dv2) &&
-                               (this.modulo10(s3) === dv3) &&
-                               (this.modulo10(s4) === dv4);
-                    }
-
-                    return false;
-                },
-
-                // ─────────────────────────────────────────────────────────────
-                //  CLASSIFY
-                //
-                //  FIX #1 — Para 44 dígitos, tenta validar como boleto de
-                //           código de barras ANTES de assumir NFe.
-                // ─────────────────────────────────────────────────────────────
-                classify(num) {
-                    const clean = num.replace(/\D/g, '');
-                    const len   = clean.length;
-                    let label   = '';
-
-                    if (len === 47 || len === 48) {
-                        const isValido = this.validarBoleto(clean);
-                        label = isValido ? 'BOLETO (VÁLIDO ✅)' : 'BOLETO (INVÁLIDO ❌)';
-                    } else if (len === 44) {
-                        // FIX #1: verifica se é boleto de código de barras (moeda '9')
-                        // antes de assumir que é uma chave de NFe
-                        const isBoletoCB = this.validarBoleto(clean);
-                        label = isBoletoCB ? 'BOLETO CBARRAS (VÁLIDO ✅)' : 'NFe';
-                    } else if (len === 14) {
-                        label = 'CNPJ';
-                    } else if (len === 11) {
-                        label = 'CPF';
-                    }
-
-                    return label ? `${num}   | ${label}` : num;
-                },
-
-                // ─────────────────────────────────────────────────────────────
-                //  FIX #4 — Helper centralizado para remover etiquetas.
-                //           Evita que números das etiquetas (ex: "10" de
-                //           "VÁLIDO") gerem entradas espúrias ao re-classificar.
-                // ─────────────────────────────────────────────────────────────
-                stripLabels(text) {
-                    return text.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)/g, '');
-                },
-
-                async copyToClipboard(text) {
-                    if (!text || !text.trim()) return false;
-                    try {
-                        await navigator.clipboard.writeText(text);
-                        return true;
-                    } catch (err) {
-                        const textArea = document.createElement('textarea');
-                        textArea.value = text;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        const success = document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        return success;
-                    }
-                },
-
-                getHistory() { return JSON.parse(localStorage.getItem('ocrHistory') || '[]'); },
-                saveHistory(text) {
-                    if (!text.trim()) return;
-                    let history = this.getHistory();
-                    if (history.length > 0 && history[0].content === text) return;
-                    history.unshift({ date: new Date().toLocaleString('pt-BR'), content: text });
-                    history = history.slice(0, 5);
-                    localStorage.setItem('ocrHistory', JSON.stringify(history));
-                },
-
-                getRotatedImageBlob() {
-                    return new Promise((resolve) => {
-                        const canvas = document.createElement('canvas');
-                        const ctx    = canvas.getContext('2d');
-                        const img    = new Image();
-                        img.onload = () => {
-                            const rad = (AppState.rotation.current * Math.PI) / 180;
-                            const sin = Math.abs(Math.sin(rad));
-                            const cos = Math.abs(Math.cos(rad));
-                            canvas.width  = img.width * cos + img.height * sin;
-                            canvas.height = img.width * sin + img.height * cos;
-                            ctx.translate(canvas.width / 2, canvas.height / 2);
-                            ctx.rotate(rad);
-                            ctx.drawImage(img, -img.width / 2, -img.height / 2);
-                            canvas.toBlob(resolve, 'image/png');
-                        };
-                        img.src = AppState.rotation.originalData;
-                    });
-                }
-            };
-
-            const Rotator = {
-                showNext() {
-                    const file = AppState.extraction.queue.shift();
-                    if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (e) => {
-                            AppState.rotation.originalData = e.target.result;
-                            DOM.rotatableImage.src = AppState.rotation.originalData;
-                            this.reset();
-                            DOM.rotationModal.classList.remove('hidden');
-                        };
-                        reader.readAsDataURL(file);
-                    } else {
-                        Extractor.finalize();
-                    }
-                },
-                hide()  { DOM.rotationModal.classList.add('hidden'); },
-                update() {
-                    DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
-                    DOM.angleDisplay.textContent       = `${AppState.rotation.current.toFixed(1)}°`;
-                    DOM.rotationSlider.value           = AppState.rotation.current;
-                },
-                adjust(angle) {
-                    let newAngle = AppState.rotation.current + angle;
-                    if (newAngle >  180) newAngle =  180;
-                    if (newAngle < -180) newAngle = -180;
-                    AppState.rotation.current = newAngle;
-                    this.update();
-                },
-                reset() {
-                    AppState.rotation.current = 0;
-                    this.update();
-                }
-            };
-
-            const Extractor = {
-                start(files) {
-                    AppState.extraction.queue          = Array.from(files);
-                    AppState.extraction.totalFiles     = files.length;
-                    AppState.extraction.processedFiles = 0;
-                    UI.clearAll();
-                    Rotator.showNext();
-                },
-
-                async processCurrentImage(rotatedBlob) {
-                    const file = new File([rotatedBlob], 'processed.png', { type: 'image/png' });
-                    AppState.extraction.processedFiles++;
-                    const progressText = AppState.extraction.totalFiles > 1
-                        ? `(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})`
-                        : '';
-                    UI.showStatus(`A processar ${progressText}...`, 'processing');
-
-                    const imageURL = URL.createObjectURL(file);
-
-                    try {
-                        const preprocessedImage = await this.preprocessImage(imageURL);
-                        let resultFound = false;
-
-                        // --- Tentativa 1: Código de Barras via ZXing ---
-                        try {
-                            const codeReader = new ZXing.BrowserMultiFormatReader();
-                            const result     = await codeReader.decodeFromImageUrl(preprocessedImage);
-                            if (result?.getText()) {
-                                const text = result.getText();
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(text);
-                                resultFound = true;
-                            }
-                        } catch (err) { /* nenhum código de barras encontrado */ }
-
-                        // --- Tentativa 2: OCR via Tesseract ---
-                        if (!resultFound) {
-                            UI.showStatus(`🔍 Lendo texto... ${progressText}`, 'processing');
-                            const worker = await Tesseract.createWorker({
-                                logger: m => {
-                                    if (m.status === 'recognizing text')
-                                        UI.updateProgress(50 + Math.round(m.progress * 50));
-                                }
-                            });
-                            await worker.loadLanguage('por');
-                            await worker.initialize('por');
-                            await worker.setParameters({ tessedit_char_whitelist: '0123456789' });
-
-                            const { data } = await worker.recognize(preprocessedImage);
-                            await worker.terminate();
-
-                            // ─────────────────────────────────────────────────
-                            //  FIX #2 — Tenta a sequência COMPLETA de dígitos
-                            //  primeiro. Resolve a fragmentação que ocorre quando
-                            //  o OCR lê uma linha digitável com espaços/pontos
-                            //  (ex: "34191 75617..." → fragmentos de 5 dígitos).
-                            // ─────────────────────────────────────────────────
-                            const allDigits = data.text.replace(/\D/g, '');
-
-                            if (allDigits.length === 47 || allDigits.length === 48) {
-                                // Tamanho exato de linha digitável — classifica direto
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(allDigits);
-                                resultFound = true;
-                            } else if (allDigits.length === 44) {
-                                // Pode ser código de barras ou NFe — classify decide
-                                DOM.output.value += (DOM.output.value ? '\n' : '') + Logic.classify(allDigits);
-                                resultFound = true;
-                            } else {
-                                // Fallback: fragmentos individuais (CPF, CNPJ, outros)
-                                const numeros = data.text.match(/\d+/g);
-                                if (numeros?.length > 0) {
-                                    const uniqueNumbers     = [...new Set(numeros)];
-                                    const classifiedNumbers = uniqueNumbers.map(n => Logic.classify(n));
-                                    DOM.output.value += (DOM.output.value ? '\n' : '') + classifiedNumbers.join('\n');
-                                    resultFound = true;
-                                }
-                            }
+                        const nums = data.text.match(/\d+/g);
+                        if (nums?.length) {
+                            DOM.output.value += (DOM.output.value ? '\n' : '')
+                                + [...new Set(nums)].map(n => Logic.classify(n)).join('\n');
+                            found = true;
                         }
-
-                        if (!resultFound) {
-                            UI.showStatus('⚠️ Nada encontrado nesta imagem.', 'error');
-                        }
-
-                    } catch (error) {
-                        console.error('Erro:', error);
-                        UI.showStatus('❌ Erro ao processar.', 'error');
-                    } finally {
-                        URL.revokeObjectURL(imageURL);
-                        UI.updateProgress(100);
-                        Rotator.showNext();
                     }
-                },
-
-                finalize() {
-                    if (DOM.output.value.trim()) {
-                        UI.showStatus('✅ Concluído!', 'success');
-                        Logic.saveHistory(DOM.output.value);
-                        UI.renderHistory(Logic.getHistory());
-                    }
-                    UI.updateCharCounter();
-                },
-
-                preprocessImage(imageSource) {
-                    return new Promise((resolve, reject) => {
-                        const img = new Image();
-                        img.crossOrigin = 'Anonymous';
-                        img.onload = () => {
-                            const canvas = DOM.preview;
-                            const ctx    = canvas.getContext('2d');
-                            canvas.width  = img.width;
-                            canvas.height = img.height;
-                            ctx.filter    = 'grayscale(1) contrast(1.5)';
-                            ctx.drawImage(img, 0, 0);
-                            canvas.classList.remove('hidden');
-                            canvas.style.display = 'block';
-                            resolve(canvas.toDataURL('image/png'));
-                        };
-                        img.onerror = reject;
-                        img.src = imageSource;
-                    });
                 }
-            };
-
-            const Events = {
-                setup() {
-                    const handleImageFiles = (files) => {
-                        const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
-                        if (imageFiles.length > 0) Extractor.start(imageFiles);
-                    };
-
-                    document.addEventListener('paste', e => {
-                        if (!DOM.rotationModal.classList.contains('hidden')) return;
-                        const imageFile = [...(e.clipboardData?.items || [])]
-                            .map(i => i.getAsFile())
-                            .find(f => f?.type.startsWith('image/'));
-                        if (imageFile) { e.preventDefault(); Extractor.start([imageFile]); }
-                    });
-
-                    DOM.pasteArea.addEventListener('click',     () => DOM.fileInput.click());
-                    DOM.pasteArea.addEventListener('dragover',  e  => { e.preventDefault(); DOM.pasteArea.classList.add('border-indigo-500'); });
-                    DOM.pasteArea.addEventListener('dragleave', ()  => DOM.pasteArea.classList.remove('border-indigo-500'));
-                    DOM.pasteArea.addEventListener('drop', e => {
-                        e.preventDefault();
-                        DOM.pasteArea.classList.remove('border-indigo-500');
-                        if (e.dataTransfer.files) handleImageFiles(e.dataTransfer.files);
-                    });
-                    DOM.fileInput.addEventListener('change', e => {
-                        if (e.target.files.length > 0) handleImageFiles(e.target.files);
-                    });
-
-                    // ─────────────────────────────────────────────────────────
-                    //  FIX #4 — Remove etiquetas antes de re-classificar para
-                    //  evitar que "10" de "VÁLIDO ✅" vire uma entrada espúria.
-                    // ─────────────────────────────────────────────────────────
-                    DOM.cleanJoinBtn.addEventListener('click', () => {
-                        const raw = DOM.output.value;
-                        if (raw.trim()) {
-                            const semEtiquetas = Logic.stripLabels(raw);
-                            const nums         = semEtiquetas.match(/\d+/g) || [];
-                            const unique       = [...new Set(nums)];
-                            const classified   = unique.map(n => Logic.classify(n));
-                            DOM.output.value   = classified.join('\n');
-                            UI.updateCharCounter();
-                            const btn = DOM.cleanJoinBtn;
-                            const originalHTML = btn.innerHTML;
-                            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
-                            setTimeout(() => btn.innerHTML = originalHTML, 1500);
-                        }
-                    });
-
-                    DOM.copyBtn.addEventListener('click', async () => {
-                        // FIX #4: usa stripLabels (helper centralizado)
-                        const cleanContent = Logic.stripLabels(DOM.output.value);
-                        const success      = await Logic.copyToClipboard(cleanContent);
-                        if (success) {
-                            const btn = DOM.copyBtn;
-                            const originalHTML = btn.innerHTML;
-                            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
-                            btn.classList.replace('bg-blue-600', 'bg-green-600');
-                            setTimeout(() => {
-                                btn.innerHTML = originalHTML;
-                                btn.classList.replace('bg-green-600', 'bg-blue-600');
-                            }, 2000);
-                        }
-                    });
-
-                    DOM.clearBtn.addEventListener('click',    () => UI.clearAll());
-                    DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
-                    DOM.output.addEventListener('input',      () => UI.updateCharCounter());
-
-                    DOM.rotationSlider.addEventListener('input', e => {
-                        AppState.rotation.current = parseFloat(e.target.value);
-                        Rotator.update();
-                    });
-
-                    // ─────────────────────────────────────────────────────────
-                    //  FIX #5 — A condição original avaliava a string "0" como
-                    //  truthy, bloqueando Rotator.reset(). Agora usa parseFloat.
-                    // ─────────────────────────────────────────────────────────
-                    DOM.resetRotationBtn.addEventListener('click', () => {
-                        const angle = parseFloat(DOM.resetRotationBtn.dataset.angle);
-                        if (angle !== 0) Rotator.adjust(angle);
-                        else Rotator.reset();
-                    });
-
-                    DOM.closeModalBtn.addEventListener('click',     () => { Rotator.hide(); AppState.extraction.queue = []; });
-                    DOM.cancelRotationBtn.addEventListener('click',  () => DOM.closeModalBtn.click());
-
-                    DOM.quickBtns.forEach(btn => btn.addEventListener('click', e => {
-                        const angle = parseFloat(e.currentTarget.dataset.angle);
-                        if (angle === 0) Rotator.reset();
-                        else Rotator.adjust(angle);
-                    }));
-
-                    DOM.confirmRotationBtn.addEventListener('click', async () => {
-                        Rotator.hide();
-                        const rotatedBlob = await Logic.getRotatedImageBlob();
-                        await Extractor.processCurrentImage(rotatedBlob);
-                    });
-
-                    DOM.linkButtons.forEach(button => {
-                        button.addEventListener('click', async (e) => {
-                            e.preventDefault();
-                            const el        = e.currentTarget;
-                            const pattern   = el.dataset.pattern;
-                            const text      = DOM.output.value;
-                            const cleanText = text.replace(/\D/g, '');
-                            const match     = cleanText.match(new RegExp(pattern));
-                            if (match) {
-                                window.open(el.href, '_blank');
-                                await Logic.copyToClipboard(match[0]);
-                                UI.showStatus(`✅ Copiado: ${match[0]}`, 'success');
-                            } else {
-                                UI.showStatus('⚠️ Padrão não encontrado no texto extraído.', 'error');
-                            }
-                        });
-                    });
-                }
-            };
-
-            UI.init();
-            Events.setup();
-            UI.loadTheme();
+                if (!found) UI.showStatus('⚠️ Nada encontrado nesta imagem.', 'error');
+            } catch (e) {
+                console.error(e); UI.showStatus('❌ Erro ao processar a imagem.', 'error');
+            } finally {
+                URL.revokeObjectURL(url); UI.updateProgress(100); Rotator.showNext();
+            }
+        },
+        finalize() {
+            if (DOM.output.value.trim()) {
+                UI.showStatus('✅ Extração concluída!', 'success');
+                Logic.saveHistory(DOM.output.value);
+                UI.renderHistory(Logic.getHistory());
+            }
             UI.updateCharCounter();
-        });
-    </script>
+            UI.triggerSummary(); /* ← dispara painel de resumo automaticamente */
+        },
+        preprocessImage(src) {
+            return new Promise((res, rej) => {
+                const img = new Image(); img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const c = DOM.preview, ctx = c.getContext('2d');
+                    c.width  = img.width;
+                    c.height = img.height;
+                    ctx.filter = 'grayscale(1) contrast(1.5)';
+                    ctx.drawImage(img, 0, 0);
+                    c.classList.remove('hidden');
+                    c.style.display = 'block';
+                    res(c.toDataURL('image/png'));
+                };
+                img.onerror = rej;
+                img.src = src;
+            });
+        }
+    };
+
+    /* ──────────────────────────────────────────────
+       EVENTS — todos os listeners de UI
+       ────────────────────────────────────────────── */
+    const Events = {
+        setup() {
+            const handleFiles = files => {
+                const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+                if (imgs.length) Extractor.start(imgs);
+            };
+            document.addEventListener('paste', e => {
+                if (!DOM.rotationModal.classList.contains('hidden')) return;
+                const f = [...(e.clipboardData?.items || [])].map(i => i.getAsFile()).find(f => f?.type.startsWith('image/'));
+                if (f) { e.preventDefault(); Extractor.start([f]); }
+            });
+            DOM.pasteArea.addEventListener('click', () => DOM.fileInput.click());
+            DOM.pasteArea.addEventListener('dragover', e => { e.preventDefault(); DOM.pasteArea.classList.add('border-indigo-500'); });
+            DOM.pasteArea.addEventListener('dragleave', () => DOM.pasteArea.classList.remove('border-indigo-500'));
+            DOM.pasteArea.addEventListener('drop', e => {
+                e.preventDefault(); DOM.pasteArea.classList.remove('border-indigo-500');
+                if (e.dataTransfer.files) handleFiles(e.dataTransfer.files);
+            });
+            DOM.fileInput.addEventListener('change', e => { if (e.target.files.length) handleFiles(e.target.files); });
+
+            DOM.cleanJoinBtn.addEventListener('click', () => {
+                const raw = DOM.output.value; if (!raw.trim()) return;
+                const sem = Logic.stripLabels(raw);
+                const u   = [...new Set(sem.match(/\d+/g) || [])];
+                DOM.output.value = u.map(n => Logic.classify(n)).join('\n');
+                UI.updateCharCounter(); UI.triggerSummary();
+                const btn = DOM.cleanJoinBtn, orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
+                setTimeout(() => btn.innerHTML = orig, 1500);
+            });
+
+            DOM.copyBtn.addEventListener('click', async () => {
+                const ok = await Logic.copyToClipboard(Logic.stripLabels(DOM.output.value));
+                if (ok) {
+                    const btn = DOM.copyBtn, orig = btn.innerHTML;
+                    btn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
+                    btn.classList.replace('bg-blue-600', 'bg-green-600');
+                    setTimeout(() => { btn.innerHTML = orig; btn.classList.replace('bg-green-600', 'bg-blue-600'); }, 2000);
+                }
+            });
+
+            DOM.clearBtn.addEventListener('click',   () => UI.clearAll());
+            DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
+
+            /* Dispara painel ao editar o textarea manualmente */
+            DOM.output.addEventListener('input', () => { UI.updateCharCounter(); UI.triggerSummary(); });
+
+            DOM.rotationSlider.addEventListener('input', e => {
+                AppState.rotation.current = parseFloat(e.target.value); Rotator.update();
+            });
+            DOM.quickBtns.forEach(b => b.addEventListener('click', e => {
+                const a = parseFloat(e.currentTarget.dataset.angle);
+                a === 0 ? Rotator.reset() : Rotator.adjust(a);
+            }));
+            DOM.closeModalBtn.addEventListener('click',    () => { Rotator.hide(); AppState.extraction.queue = []; });
+            DOM.cancelRotationBtn.addEventListener('click', () => DOM.closeModalBtn.click());
+            DOM.confirmRotationBtn.addEventListener('click', async () => {
+                Rotator.hide();
+                await Extractor.processCurrentImage(await Logic.getRotatedImageBlob());
+            });
+
+            DOM.linkButtons.forEach(btn => btn.addEventListener('click', async e => {
+                e.preventDefault();
+                const el = e.currentTarget, pt = el.dataset.pattern;
+                const m  = DOM.output.value.replace(/\D/g, '').match(new RegExp(pt));
+                if (m) { window.open(el.href, '_blank'); await Logic.copyToClipboard(m[0]); UI.showStatus(`✅ Copiado: ${m[0]}`, 'success'); }
+                else     UI.showStatus('⚠️ Padrão não encontrado no texto extraído.', 'error');
+            }));
+        }
+    };
+
+    UI.init();
+    Events.setup();
+    UI.updateCharCounter();
+});
+</script>
 </body>
 </html>
