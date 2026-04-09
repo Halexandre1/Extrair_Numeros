@@ -4,34 +4,114 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Extrator e Editor PRO | Validador Integrado</title>
-    <meta name="description" content="Ferramenta de OCR e extração de códigos de barras com validação automática de boletos.">
     <meta name="author" content="HAlexandre">
     <meta name="theme-color" content="#4f46e5">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+    
+    <!-- Tailwind CSS (Mantido via CDN para portabilidade, configurado para melhor performance) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Bibliotecas Externas -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.0.2/dist/tesseract.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/zxing.min.js"></script>
+    
     <script>
         tailwind.config = {
             darkMode: "class",
-            theme: { extend: { fontFamily: { sans: ["Inter","sans-serif"] }, colors: { brand: { 500:"#6366f1", 600:"#4f46e5" } } } }
+            theme: { extend: { fontFamily: { sans: ["Inter","sans-serif"] } } }
         }
     </script>
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
-        body { font-family:"Inter",sans-serif; transition:background-color .3s,color .3s; }
-        .progress-fill { transition:width .3s ease-in-out; }
-        .rotation-modal { backdrop-filter:blur(5px); }
+        body { font-family: "Inter", sans-serif; transition: background-color .3s, color .3s; }
+        .progress-fill { transition: width .3s ease-in-out; }
+        .rotation-modal { backdrop-filter: blur(5px); }
         .rotation-slider { -webkit-appearance:none; width:100%; height:8px; border-radius:5px; background:#e2e8f0; outline:none; margin-bottom:15px; }
         .dark .rotation-slider { background:#4a5568; }
-        .rotation-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%; background:linear-gradient(45deg,#667eea,#764ba2); cursor:pointer; box-shadow:0 2px 10px rgba(102,126,234,.3); transition:all .3s ease; }
+        .rotation-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:24px; height:24px; border-radius:50%; background:linear-gradient(45deg,#667eea,#764ba2); cursor:pointer; box-shadow:0 2px 10px rgba(102,126,234,.3); transition:all .3s; }
         .rotation-slider::-webkit-slider-thumb:hover { transform:scale(1.2); }
-        ::-webkit-scrollbar { width:8px; }
-        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar { width:8px; } ::-webkit-scrollbar-track { background:transparent; }
         ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:4px; }
         .dark ::-webkit-scrollbar-thumb { background:#475569; }
-        /* ═══ PAINEL DE RESUMO ═══ */
+
+        .session-badge { display:inline-flex; align-items:center; gap:.4rem; background:#e0e7ff; color:#4338ca; border-radius:9999px; padding:.3rem .9rem; font-size:.78rem; font-weight:700; margin-top:.6rem; transition:all .3s; }
+        .dark .session-badge { background:#312e81; color:#a5b4fc; }
+        .session-badge.at-limit { background:#fee2e2; color:#dc2626; }
+        .dark .session-badge.at-limit { background:#450a0a; color:#fca5a5; }
+        .pulse-dot { width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; animation:pdot 1.5s ease-in-out infinite; }
+        @keyframes pdot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+        .step-dot { width:.5rem; height:.5rem; border-radius:50%; background:#cbd5e1; display:inline-block; transition:all .3s; }
+        .dark .step-dot { background:#475569; }
+        .step-dot.done { background:#6366f1; }
+        .step-dot.active { background:#f59e0b; animation:pdot 1s ease-in-out infinite; }
+        .progress-steps { display:flex; gap:.25rem; justify-content:center; flex-wrap:wrap; margin-top:.35rem; }
+        .queue-pill { display:inline-flex; align-items:center; gap:.3rem; background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0; border-radius:9999px; padding:.2rem .6rem; font-size:.7rem; font-weight:700; }
+        .dark .queue-pill { background:#14532d; color:#86efac; border-color:#166534; }
+
+        .selection-panel { margin-top:1.5rem; padding-top:1.25rem; border-top:2px solid #e2e8f0; }
+        .dark .selection-panel { border-top-color:#334155; }
+        .sel-title { font-size:.82rem; font-weight:800; color:#475569; letter-spacing:.06em; text-transform:uppercase; }
+        .dark .sel-title { color:#94a3b8; }
+        .sel-count-badge { background:#e0e7ff; color:#4338ca; padding:.22rem .65rem; border-radius:9999px; font-size:.72rem; font-weight:700; }
+        .dark .sel-count-badge { background:#312e81; color:#a5b4fc; }
+        .sel-count-badge.none { background:#fee2e2; color:#b91c1c; }
+        .dark .sel-count-badge.none { background:#450a0a; color:#fca5a5; }
+        .btn-sel { display:inline-flex; align-items:center; gap:.3rem; font-size:.72rem; font-weight:700; padding:.35rem .75rem; border-radius:.45rem; border:1px solid #e2e8f0; cursor:pointer; transition:all .2s; background:#f1f5f9; color:#475569; }
+        .dark .btn-sel { background:#1e293b; color:#94a3b8; border-color:#334155; }
+        .btn-sel:hover { background:#e0e7ff; color:#4338ca; border-color:#a5b4fc; }
+        .dark .btn-sel:hover { background:#312e81; color:#a5b4fc; }
+        .btn-copy-sel { display:inline-flex; align-items:center; gap:.4rem; background:linear-gradient(135deg,#6366f1,#4f46e5); color:#fff; font-size:.78rem; font-weight:700; padding:.4rem 1rem; border-radius:.5rem; border:none; cursor:pointer; transition:all .2s; box-shadow:0 2px 8px rgba(99,102,241,.3); }
+        .btn-copy-sel:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 4px 14px rgba(99,102,241,.4); }
+        .btn-copy-sel:disabled { opacity:.4; cursor:not-allowed; }
+
+        .boleto-card { border:2px solid #e2e8f0; border-radius:.9rem; padding:.9rem 1.1rem; transition:all .2s; background:#fff; position:relative; overflow:hidden; }
+        .dark .boleto-card { background:#0f172a; border-color:#1e293b; }
+        .boleto-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px; background:#e2e8f0; transition:background .2s; }
+        .dark .boleto-card::before { background:#334155; }
+        .boleto-card.selected { border-color:#6366f1; background:#fafafe; }
+        .dark .boleto-card.selected { border-color:#4f46e5; background:#0d1230; }
+        .boleto-card.selected::before { background:#6366f1; }
+        .boleto-card.type-nfe.selected::before { background:#16a34a; }
+        .boleto-card.type-conv.selected::before { background:#d97706; }
+        .boleto-card.type-other.selected::before { background:#64748b; }
+
+        .card-header { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; margin-bottom:.55rem; }
+        .card-checkbox { width:1.1rem; height:1.1rem; cursor:pointer; accent-color:#6366f1; flex-shrink:0; }
+        .card-num { display:inline-flex; align-items:center; justify-content:center; min-width:1.55rem; height:1.55rem; border-radius:50%; background:#6366f1; color:#fff; font-size:.65rem; font-weight:800; flex-shrink:0; }
+        .type-nfe .card-num { background:#16a34a; }
+        .type-conv .card-num { background:#d97706; }
+        .type-other .card-num { background:#64748b; }
+
+        .card-type-badge { display:inline-flex; align-items:center; gap:.25rem; font-size:.62rem; font-weight:800; padding:.2rem .55rem; border-radius:9999px; letter-spacing:.05em; text-transform:uppercase; }
+        .badge-boleto { background:#dbeafe; color:#1d4ed8; } .dark .badge-boleto { background:#1e3a5f; color:#93c5fd; }
+        .badge-nfe    { background:#dcfce7; color:#15803d; } .dark .badge-nfe    { background:#14532d; color:#86efac; }
+        .badge-conv   { background:#fef3c7; color:#b45309; } .dark .badge-conv   { background:#451a03; color:#fcd34d; }
+        .badge-other  { background:#f1f5f9; color:#475569; } .dark .badge-other  { background:#1e293b; color:#94a3b8; }
+
+        .card-actions { margin-left:auto; display:flex; gap:.35rem; flex-shrink:0; }
+        .cbtn { width:1.9rem; height:1.9rem; border-radius:.45rem; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.72rem; font-weight:700; transition:all .2s; }
+        .cbtn-copy { background:#dbeafe; color:#1d4ed8; } .cbtn-copy:hover { background:#1d4ed8; color:#fff; }
+        .dark .cbtn-copy { background:#1e3a5f; color:#93c5fd; } .dark .cbtn-copy:hover { background:#1d4ed8; color:#fff; }
+        .cbtn-del  { background:#fee2e2; color:#b91c1c; } .cbtn-del:hover  { background:#b91c1c; color:#fff; }
+        .dark .cbtn-del  { background:#450a0a; color:#fca5a5; } .dark .cbtn-del:hover  { background:#b91c1c; color:#fff; }
+
+        .card-digits-label { font-size:.6rem; color:#94a3b8; font-weight:600; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.15rem; }
+        .card-digits { font-family: "Courier New", monospace; font-size:.8rem; font-weight:600; color:#1e293b; word-break:break-all; background:#f8fafc; border:1px solid #e2e8f0; border-radius:.5rem; padding:.5rem .7rem; margin-bottom:.45rem; cursor:pointer; transition:all .2s; user-select:all; letter-spacing:.03em; }
+        .dark .card-digits { background:#1e293b; border-color:#334155; color:#e2e8f0; }
+        .card-digits:hover { background:#ede9fe; border-color:#a5b4fc; }
+        .dark .card-digits:hover { background:#1e1b4b; border-color:#4f46e5; }
+
+        .card-pills { display:flex; flex-wrap:wrap; gap:.4rem; }
+        .card-pill { display:inline-flex; align-items:center; gap:.25rem; font-size:.68rem; font-weight:600; padding:.22rem .6rem; border-radius:9999px; background:#f1f5f9; color:#475569; }
+        .dark .card-pill { background:#1e293b; color:#94a3b8; }
+
+        .card-toast { position:absolute; top:.6rem; right:3.5rem; background:#22c55e; color:#fff; font-size:.65rem; font-weight:700; padding:.18rem .55rem; border-radius:9999px; opacity:0; transition:opacity .3s; pointer-events:none; }
+        .card-toast.show { opacity:1; }
+
+        .total-banner { display:flex; align-items:center; gap:.5rem; background:linear-gradient(135deg,#dbeafe,#ede9fe); border:1px solid #bfdbfe; border-radius:.65rem; padding:.65rem 1rem; margin-bottom:.75rem; font-size:.82rem; color:#1e40af; font-weight:600; }
+        .dark .total-banner { background:linear-gradient(135deg,#1e3a5f,#2e1065); border-color:#1e40af; color:#93c5fd; }
+
         .summary-wrapper { margin-top:1.25rem; padding-top:1rem; border-top:1px solid #e2e8f0; }
         .dark .summary-wrapper { border-top-color:#334155; }
         .summary-title { font-size:.75rem; font-weight:700; color:#64748b; letter-spacing:.06em; text-transform:uppercase; margin-bottom:.6rem; }
@@ -39,477 +119,1180 @@
         .summary-cards { display:flex; flex-direction:column; gap:.6rem; }
         .summary-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:.75rem; padding:.85rem 1rem; }
         .dark .summary-card { background:#0f172a; border-color:#1e293b; }
-        .summary-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.62rem; font-weight:800; padding:.22rem .55rem; border-radius:9999px; letter-spacing:.07em; text-transform:uppercase; margin-bottom:.65rem; }
-        .summary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.4rem; }
-        @media(max-width:500px){ .summary-grid{ grid-template-columns:1fr; } }
+        .summary-badge { display:inline-flex; align-items:center; gap:.3rem; font-size:.62rem; font-weight:800; padding:.22rem .55rem; border-radius:9999px; letter-spacing:.07em; text-transform:uppercase; }
+        .summary-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:.4rem; margin-top:.55rem; }
+        @media(max-width:500px){ .summary-grid { grid-template-columns:1fr; } }
         .summary-field { background:#fff; border:1px solid #f1f5f9; border-radius:.45rem; padding:.4rem .65rem; }
         .dark .summary-field { background:#1e293b; border-color:#334155; }
         .summary-field.span2 { grid-column:1/-1; }
         .summary-label { display:block; font-size:.62rem; color:#94a3b8; margin-bottom:.15rem; }
         .summary-value { display:block; font-size:.78rem; font-weight:600; color:#1e293b; word-break:break-all; }
         .dark .summary-value { color:#e2e8f0; }
-        .badge-boleto   { background:#dbeafe; color:#1d4ed8; }
-        .dark .badge-boleto   { background:#1e3a5f; color:#93c5fd; }
-        .badge-nfe      { background:#dcfce7; color:#15803d; }
-        .dark .badge-nfe      { background:#14532d; color:#86efac; }
-        .badge-convenio { background:#fef3c7; color:#b45309; }
-        .dark .badge-convenio { background:#451a03; color:#fcd34d; }
+        .badge-boleto-s { background:#dbeafe; color:#1d4ed8; } .dark .badge-boleto-s { background:#1e3a5f; color:#93c5fd; }
+        .badge-nfe-s    { background:#dcfce7; color:#15803d; } .dark .badge-nfe-s    { background:#14532d; color:#86efac; }
+        .badge-conv-s   { background:#fef3c7; color:#b45309; } .dark .badge-conv-s   { background:#451a03; color:#fcd34d; }
+        .snum { display:inline-flex; align-items:center; justify-content:center; width:1.4rem; height:1.4rem; border-radius:50%; background:#6366f1; color:#fff; font-size:.62rem; font-weight:800; flex-shrink:0; }
     </style>
 </head>
 <body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-sans flex items-center justify-center min-h-screen p-4">
-<div class="container bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
+<div class="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-2xl w-full max-w-3xl relative">
+
     <button id="themeToggle" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Alternar tema">🌙</button>
+
     <header class="text-center mb-6 flex items-center justify-center gap-4">
         <img src="https://raw.githubusercontent.com/Halexandre1/PDF_PRO/main/HERBERT.jpg" alt="Logo" class="w-12 h-12 rounded-full object-cover shadow-md">
         <div class="text-left">
             <h2 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">Extrator e Editor PRO</h2>
-            <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Cole, rotacione e extraia números com validação de boletos.</p>
+            <p class="text-slate-500 dark:text-slate-400 mt-1 text-sm">Cole, rotacione e extraia — até 10 boletos por sessão.</p>
         </div>
     </header>
+
     <div id="pasteArea" class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg p-8 text-center cursor-pointer hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all group">
         <i class="fas fa-paste text-4xl text-slate-400 dark:text-slate-500 mb-3 group-hover:text-indigo-500 transition-colors"></i>
         <p class="font-semibold">Clique aqui e cole (Ctrl+V) ou arraste imagens</p>
-        <span class="text-sm text-slate-500 dark:text-slate-400">ou</span>
-        <label for="fileInput" class="mt-2 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
-            <i class="fas fa-upload mr-2"></i> Selecionar Ficheiros
+        <p id="pasteHint" class="text-xs text-slate-400 dark:text-slate-500 mt-1">Suporta até <strong>10 extrações</strong> por sessão — cole um boleto de cada vez</p>
+        <span class="text-sm text-slate-500 dark:text-slate-400 block my-1">ou</span>
+        <label for="fileInput" class="mt-1 inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg cursor-pointer transition-colors">
+            <i class="fas fa-upload mr-2"></i> Selecionar Arquivos
         </label>
         <input type="file" id="fileInput" class="hidden" accept="image/*" multiple>
+        <div id="sessionBadge" class="session-badge hidden mx-auto w-fit">
+            <span class="pulse-dot"></span>
+            <span>Sessão: <strong id="sessionCountText">0/10</strong></span>
+            <span id="sessionRoomText" class="opacity-70 font-normal ml-1"></span>
+        </div>
+        <div id="progressSteps" class="progress-steps hidden mt-2"></div>
     </div>
+
     <div id="status" class="text-center p-3 my-4 rounded-lg text-sm font-semibold hidden"></div>
     <div id="progressBar" class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 my-4 hidden">
         <div id="progressFill" class="bg-indigo-600 h-2.5 rounded-full progress-fill" style="width:0%"></div>
     </div>
     <canvas id="preview" class="max-w-full max-h-96 mx-auto my-4 rounded-lg shadow-md border border-slate-200 dark:border-slate-600 hidden"></canvas>
+
     <div class="mt-6">
-        <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">📊 Números extraídos:</label>
-        <textarea id="output" class="w-full h-40 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner" placeholder="Os números extraídos aparecerão aqui..."></textarea>
+        <div class="flex items-center justify-between mb-1">
+            <label for="output" class="block text-sm font-medium text-slate-700 dark:text-slate-300">📊 Números extraídos (bruto):</label>
+            <div id="extractionBadge" class="hidden queue-pill"><i class="fas fa-check-circle mr-1"></i><span id="extractionBadgeText">0 extrações</span></div>
+        </div>
+        <textarea id="output" class="w-full h-32 p-3 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-md font-mono text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition shadow-inner" placeholder="Os números extraídos aparecerão aqui…"></textarea>
         <div id="charCounter" class="text-right text-xs text-slate-500 dark:text-slate-400 mt-1 pr-1 font-semibold">Dígitos: 0 | Linhas: 0</div>
     </div>
-    <div id="summaryPanel" class="hidden"></div>
-    <div class="flex flex-wrap justify-center gap-3 mt-4">
-        <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
-        <button id="copyBtn"      class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-copy mr-2"></i>Copiar Números</button>
-        <button id="clearBtn"     class="bg-red-600  hover:bg-red-700  text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+
+    <div id="selectionPanel" class="selection-panel hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <span class="sel-title"><i class="fas fa-list-check mr-2 text-indigo-500"></i>Seleção de Boletos</span>
+            <div class="flex flex-wrap items-center gap-2">
+                <span id="selCountBadge" class="sel-count-badge none">0 selecionados</span>
+                <button id="btnSelAll" class="btn-sel"><i class="fas fa-check-double"></i> Todos</button>
+                <button id="btnSelNone" class="btn-sel"><i class="far fa-square"></i> Nenhum</button>
+                <button id="btnCopySel" class="btn-copy-sel" disabled>
+                    <i class="fas fa-copy"></i><span id="btnCopySelText">Copiar selecionados</span>
+                </button>
+            </div>
+        </div>
+        <div id="boletosGrid" class="flex flex-col gap-3"></div>
     </div>
+
+    <div id="summaryPanel" class="hidden"></div>
+
+    <div class="flex flex-wrap justify-center gap-3 mt-6">
+        <button id="cleanJoinBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-broom mr-2"></i>Limpar e Classificar</button>
+        <button id="copyBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"><i class="fas fa-copy mr-2"></i>Copiar Tudo</button>
+        <button id="clearBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"><i class="fas fa-trash-alt mr-2"></i>Limpar Tudo</button>
+    </div>
+
     <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-center">
         <h3 class="text-lg font-semibold text-slate-700 dark:text-slate-300 mb-3">🔗 Links Úteis de Consulta</h3>
         <div class="flex flex-wrap justify-center gap-3">
-            <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" data-name="CNPJ" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
-            <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" data-name="Simples Nacional" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
-            <a href="https://consultadanfe.com/" data-pattern="\d{44}" data-name="NFe" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
+            <a href="https://halexandre1.github.io/ConsultaCNPJ/" data-pattern="\d{14}" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">CNPJ</a>
+            <a href="https://www8.receita.fazenda.gov.br/SimplesNacional/Aplicacoes/ATB/ConsultaOptantes.app/ConsultarOpcao.aspx" data-pattern="\d{14}" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Simples Nacional</a>
+            <a href="https://consultadanfe.com/" data-pattern="\d{44}" class="link-button bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition-colors no-underline">Nota Fiscal (DANFE)</a>
         </div>
     </div>
+
     <div class="mt-8">
-        <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 5)</h3>
+        <h3 class="text-lg font-semibold text-center text-slate-700 dark:text-slate-300 mb-3">📜 Histórico (últimas 10)</h3>
         <div id="historyContainer" class="space-y-2"></div>
     </div>
+
     <footer class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700 text-center text-sm text-slate-500 dark:text-slate-400" id="signature"></footer>
 </div>
-<!-- Modal de Rotação -->
+
 <div id="rotationModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
     <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-4xl p-6 relative">
-        <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-transform hover:scale-110" aria-label="Fechar">&times;</button>
-        <h3 class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-4">Ajustar Rotação da Imagem</h3>
-        <div class="image-container mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg flex justify-center">
-            <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 ease-in-out rounded-md" alt="Imagem para rotacionar">
+        <button id="closeModalBtn" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center hover:scale-110 transition-transform">&times;</button>
+        <h3 id="rotationModalTitle" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 text-center mb-1">Ajustar Rotação da Imagem</h3>
+        <p id="rotationModalSub" class="text-center text-sm text-slate-500 dark:text-slate-400 mb-4"></p>
+        <div class="mx-auto bg-slate-200 dark:bg-slate-900/50 p-2 rounded-lg flex justify-center">
+            <img id="rotatableImage" class="max-w-full max-h-[50vh] transition-transform duration-200 rounded-md" alt="Imagem">
         </div>
-        <div class="controls mt-4 max-w-lg mx-auto">
-            <div class="control-group mb-4">
-                <div class="flex justify-between items-center mb-2">
-                    <label class="font-semibold text-slate-700 dark:text-slate-300">Ângulo:</label>
-                    <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span>
-                </div>
-                <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
+        <div class="mt-4 max-w-lg mx-auto">
+            <div class="flex justify-between items-center mb-2">
+                <label class="font-semibold text-slate-700 dark:text-slate-300">Ângulo:</label>
+                <span id="angleDisplay" class="text-indigo-600 dark:text-indigo-400 font-bold">0°</span>
             </div>
-            <div class="quick-controls flex justify-center flex-wrap gap-2 mb-4">
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0" id="resetRotationBtn">0°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
-                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-500 p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
+            <input type="range" id="rotationSlider" class="rotation-slider" min="-180" max="180" value="0" step="0.1">
+            <div class="flex justify-center flex-wrap gap-2 mb-4">
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="-10">-10°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="-1">-1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="-0.1">-0.1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="0">0°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="0.1">+0.1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="1">+1°</button>
+                <button class="quick-btn bg-slate-200 dark:bg-slate-700 hover:bg-indigo-500 hover:text-white p-2 rounded-md text-xs font-semibold" data-angle="10">+10°</button>
             </div>
-            <div class="flex justify-center gap-4">
-                <button id="cancelRotationBtn"  class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-times mr-2"></i>Cancelar</button>
+            <div class="flex justify-center gap-3">
+                <button id="cancelRotationBtn" class="bg-slate-500 hover:bg-slate-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-times mr-2"></i>Cancelar</button>
+                <button id="skipImageBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-5 rounded-lg transition-colors"><i class="fas fa-forward mr-2"></i>Pular</button>
                 <button id="confirmRotationBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-5 rounded-lg transition-colors shadow-lg shadow-green-500/30"><i class="fas fa-check mr-2"></i>Confirmar e Extrair</button>
             </div>
         </div>
     </div>
 </div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    const MAX = 10;
+
     const AppState = {
         rotation:   { current: 0, originalData: null },
         extraction: { queue: [], totalFiles: 0, processedFiles: 0 }
     };
+
+    const Session = {
+        count: 0,
+        processed: 0,
+        reset() { this.count = 0; this.processed = 0; UI.syncSession(); },
+        add(n) { this.count = Math.min(MAX, this.count + n); UI.syncSession(); },
+        tick() { this.processed++; UI.syncSession(); },
+        remaining() { return MAX - this.count; },
+        hasRoom() { return this.count < MAX; }
+    };
+
+    const $ = id => document.getElementById(id);
     const DOM = {
-        output: document.getElementById('output'), preview: document.getElementById('preview'),
-        pasteArea: document.getElementById('pasteArea'), fileInput: document.getElementById('fileInput'),
-        progressBar: document.getElementById('progressBar'), progressFill: document.getElementById('progressFill'),
-        status: document.getElementById('status'), copyBtn: document.getElementById('copyBtn'),
-        cleanJoinBtn: document.getElementById('cleanJoinBtn'), clearBtn: document.getElementById('clearBtn'),
-        historyContainer: document.getElementById('historyContainer'), charCounter: document.getElementById('charCounter'),
-        signature: document.getElementById('signature'), themeToggle: document.getElementById('themeToggle'),
-        body: document.body.parentElement, summaryPanel: document.getElementById('summaryPanel'),
-        linkButtons: document.querySelectorAll('.link-button'), rotationModal: document.getElementById('rotationModal'),
-        rotatableImage: document.getElementById('rotatableImage'), rotationSlider: document.getElementById('rotationSlider'),
-        angleDisplay: document.getElementById('angleDisplay'), quickBtns: document.querySelectorAll('.quick-btn'),
-        resetRotationBtn: document.getElementById('resetRotationBtn'),
-        confirmRotationBtn: document.getElementById('confirmRotationBtn'),
-        closeModalBtn: document.getElementById('closeModalBtn'), cancelRotationBtn: document.getElementById('cancelRotationBtn'),
+        output: $('output'),
+        preview: $('preview'),
+        pasteArea: $('pasteArea'),
+        fileInput: $('fileInput'),
+        progressBar: $('progressBar'),
+        progressFill: $('progressFill'),
+        status: $('status'),
+        copyBtn: $('copyBtn'),
+        cleanJoinBtn: $('cleanJoinBtn'),
+        clearBtn: $('clearBtn'),
+        historyContainer: $('historyContainer'),
+        charCounter: $('charCounter'),
+        signature: $('signature'),
+        themeToggle: $('themeToggle'),
+        body: document.body.parentElement,
+        summaryPanel: $('summaryPanel'),
+        rotationModal: $('rotationModal'),
+        rotationModalTitle: $('rotationModalTitle'),
+        rotationModalSub: $('rotationModalSub'),
+        rotatableImage: $('rotatableImage'),
+        rotationSlider: $('rotationSlider'),
+        angleDisplay: $('angleDisplay'),
+        confirmRotationBtn: $('confirmRotationBtn'),
+        closeModalBtn: $('closeModalBtn'),
+        cancelRotationBtn: $('cancelRotationBtn'),
+        skipImageBtn: $('skipImageBtn'),
+        sessionBadge: $('sessionBadge'),
+        sessionCountText: $('sessionCountText'),
+        sessionRoomText: $('sessionRoomText'),
+        progressSteps: $('progressSteps'),
+        extractionBadge: $('extractionBadge'),
+        extractionBadgeText: $('extractionBadgeText'),
+        pasteHint: $('pasteHint'),
+        selectionPanel: $('selectionPanel'),
+        boletosGrid: $('boletosGrid'),
+        selCountBadge: $('selCountBadge'),
+        btnSelAll: $('btnSelAll'),
+        btnSelNone: $('btnSelNone'),
+        btnCopySel: $('btnCopySel'),
+        btnCopySelText: $('btnCopySelText'),
+        linkButtons: document.querySelectorAll('.link-button'),
+        quickBtns: document.querySelectorAll('.quick-btn')
+    };
+
+    const SelectionPanel = {
+        items: [],
+
+        detectType(clean) {
+            const len = clean.length;
+            if (len === 47 || len === 48) return 'boleto';
+            if (len === 44) {
+                const cUF = parseInt(clean.substring(0, 2));
+                const mod = clean.substring(20, 22);
+                return (cUF >= 11 && cUF <= 53 && (mod === '55' || mod === '65')) ? 'nfe' : 'boleto';
+            }
+            if (len === 14) return 'cnpj';
+            if (len === 11) return 'cpf';
+            return 'other';
+        },
+
+        badgeFor(type, clean) {
+            if (type === 'nfe') return { text: '📄 NF-e', css: 'badge-nfe', cls: 'type-nfe' };
+            if (type === 'cnpj') return { text: '🏢 CNPJ', css: 'badge-other', cls: 'type-other' };
+            if (type === 'cpf') return { text: '👤 CPF', css: 'badge-other', cls: 'type-other' };
+            if (type === 'other') return { text: '🔢 Número', css: 'badge-other', cls: 'type-other' };
+
+            const ok = Logic.validarBoleto(clean);
+            const len = clean.length;
+            const sub = len === 48 ? 'Convênio' : len === 44 ? 'Cód. Barras' : 'Linha Dig.';
+            const css = len === 48 ? 'badge-conv' : 'badge-boleto';
+            const cls = len === 48 ? 'type-conv' : '';
+            return { text: `💰 Boleto ${sub} ${ok ? '✅' : '❌'}`, css, cls };
+        },
+
+        fmt(clean, len) {
+            if (len === 47) {
+                return clean.substring(0,10)+' '+clean.substring(10,21)+' '+clean.substring(21,32)+' '+clean[32]+' '+clean.substring(33);
+            }
+            if (len === 44 || len === 48) return clean.match(/.{1,11}/g).join('  ');
+            if (len === 14) return clean.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+            if (len === 11) return clean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+            return clean.match(/.{1,4}/g).join(' ');
+        },
+
+        infoPills(type, clean) {
+            const pills = [];
+            if (type === 'boleto') {
+                const d = Logic.decodificarBoleto(clean);
+                if (d) d.campos.forEach(c => {
+                    if (c.label.includes('Banco')) pills.push('🏦 ' + (c.valor.includes('–') ? c.valor.split('–')[1].trim() : c.valor));
+                    if (c.label.includes('Valor')) pills.push('💰 ' + c.valor);
+                    if (c.label.includes('Venci')) pills.push('📅 ' + c.valor);
+                });
+            }
+            if (type === 'nfe') {
+                const d = Logic.decodificarNFe(clean);
+                if (d) d.campos.forEach(c => {
+                    if (c.label.includes('Estado')) pills.push('🗺️ ' + c.valor);
+                    if (c.label.includes('Mês')) pills.push('📅 ' + c.valor);
+                    if (c.label.includes('Número')) pills.push('🔢 NF ' + c.valor);
+                });
+            }
+            return pills;
+        },
+
+        parse() {
+            const lines = DOM.output.value.split('\n').filter(l => l.trim());
+            const seen = new Set();
+            this.items = [];
+            let seq = 1;
+
+            lines.forEach(line => {
+                const clean = line.replace(/\D/g, '');
+                if (!clean || clean.length < 6 || seen.has(clean)) return;
+                seen.add(clean);
+                const type = this.detectType(clean);
+                const badge = this.badgeFor(type, clean);
+                const len = clean.length;
+                this.items.push({
+                    seq,
+                    raw: clean,
+                    display: this.fmt(clean, len),
+                    type,
+                    badge,
+                    pills: this.infoPills(type, clean),
+                    selected: true
+                });
+                seq++;
+            });
+
+            this.render();
+            this.syncCounter();
+        },
+
+        render() {
+            if (!this.items.length) {
+                DOM.selectionPanel.classList.add('hidden');
+                DOM.boletosGrid.innerHTML = '';
+                return;
+            }
+
+            DOM.selectionPanel.classList.remove('hidden');
+            DOM.boletosGrid.innerHTML = this.items.map(it => {
+                const pillsHTML = it.pills.map(p => `<span class="card-pill">${p}</span>`).join('');
+                return `
+                <div class="boleto-card ${it.selected ? 'selected' : ''} ${it.badge.cls}" data-seq="${it.seq}">
+                    <span class="card-toast" id="toast-${it.seq}">✅ Copiado!</span>
+                    <div class="card-header">
+                        <input type="checkbox" class="card-checkbox" data-seq="${it.seq}" ${it.selected ? 'checked' : ''}>
+                        <span class="card-num">${it.seq}</span>
+                        <span class="card-type-badge ${it.badge.css}">${it.badge.text}</span>
+                        <div class="card-actions">
+                            <button class="cbtn cbtn-copy btn-card-copy" data-seq="${it.seq}" title="Copiar este código">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="cbtn cbtn-del btn-card-del" data-seq="${it.seq}" title="Remover">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-digits-label">Código — clique para copiar</div>
+                    <div class="card-digits btn-card-copy" data-seq="${it.seq}">${it.display}</div>
+                    ${pillsHTML ? `<div class="card-pills">${pillsHTML}</div>` : ''}
+                </div>`;
+            }).join('');
+
+            this.bindEvents();
+        },
+
+        bindEvents() {
+            DOM.boletosGrid.querySelectorAll('.card-checkbox').forEach(el => {
+                el.addEventListener('change', e => {
+                    const it = this.bySeq(+e.target.dataset.seq);
+                    if (!it) return;
+                    it.selected = e.target.checked;
+                    const card = DOM.boletosGrid.querySelector(`.boleto-card[data-seq="${it.seq}"]`);
+                    if (card) card.classList.toggle('selected', it.selected);
+                    this.syncCounter();
+                });
+            });
+
+            DOM.boletosGrid.querySelectorAll('.btn-card-copy').forEach(el => {
+                el.addEventListener('click', async e => {
+                    const seq = +e.currentTarget.dataset.seq;
+                    const it = this.bySeq(seq);
+                    if (!it) return;
+                    await Logic.copyToClipboard(it.raw);
+                    this.toast(seq);
+                    UI.showStatus(`✅ Boleto #${seq} copiado!`, 'success');
+                });
+            });
+
+            DOM.boletosGrid.querySelectorAll('.btn-card-del').forEach(el => {
+                el.addEventListener('click', e => {
+                    const seq = +e.currentTarget.dataset.seq;
+                    this.items = this.items.filter(x => x.seq !== seq);
+                    this.items.forEach((x, i) => x.seq = i + 1);
+                    DOM.output.value = this.items.map(x => Logic.classify(x.raw)).join('\n');
+                    UI.updateCharCounter();
+                    UI.triggerSummary();
+                    this.render();
+                    this.syncCounter();
+                });
+            });
+        },
+
+        bySeq(seq) {
+            return this.items.find(x => x.seq === seq);
+        },
+
+        toast(seq) {
+            const el = document.getElementById(`toast-${seq}`);
+            if (!el) return;
+            el.classList.add('show');
+            setTimeout(() => el.classList.remove('show'), 1800);
+        },
+
+        syncCounter() {
+            const sel = this.items.filter(x => x.selected).length;
+            const tot = this.items.length;
+            DOM.selCountBadge.textContent = `${sel} de ${tot} selecionado${sel !== 1 ? 's' : ''}`;
+            DOM.selCountBadge.classList.toggle('none', sel === 0);
+            DOM.btnCopySel.disabled = sel === 0;
+            DOM.btnCopySelText.textContent = sel === 0
+                ? 'Copiar selecionados'
+                : `Copiar ${sel} selecionado${sel !== 1 ? 's' : ''}`;
+        },
+
+        selectAll() {
+            this.items.forEach(x => x.selected = true);
+            this.render();
+            this.syncCounter();
+        },
+
+        selectNone() {
+            this.items.forEach(x => x.selected = false);
+            this.render();
+            this.syncCounter();
+        },
+
+        async copySelected() {
+            const sel = this.items.filter(x => x.selected).map(x => x.raw);
+            if (!sel.length) return;
+            const ok = await Logic.copyToClipboard(sel.join('\n'));
+            if (ok) {
+                const orig = DOM.btnCopySelText.textContent;
+                DOM.btnCopySelText.textContent = `✅ ${sel.length} copiado${sel.length > 1 ? 's' : ''}!`;
+                DOM.btnCopySel.style.background = 'linear-gradient(135deg,#16a34a,#15803d)';
+                setTimeout(() => {
+                    DOM.btnCopySelText.textContent = orig;
+                    DOM.btnCopySel.style.background = '';
+                }, 2000);
+                UI.showStatus(`✅ ${sel.length} código${sel.length > 1 ? 's' : ''} copiado${sel.length > 1 ? 's' : ''}!`, 'success');
+            }
+        },
+
+        clear() {
+            this.items = [];
+            DOM.boletosGrid.innerHTML = '';
+            DOM.selectionPanel.classList.add('hidden');
+        }
     };
 
     const UI = {
-        init() { this.loadTheme(); this.setSignature(); this.renderHistory(Logic.getHistory()); },
+        init() {
+            this.loadTheme();
+            this.setSignature();
+            this.renderHistory(Logic.getHistory());
+            this.syncSession();
+        },
+
         showStatus(msg, type = 'processing') {
-            const s = { processing:'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300', success:'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300', error:'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' };
+            const s = {
+                processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+                success: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+                error: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+            };
             DOM.status.textContent = msg;
-            DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${s[type]||s.processing}`;
+            DOM.status.className = `text-center p-3 my-4 rounded-lg text-sm font-semibold ${s[type] || s.processing}`;
             DOM.status.classList.remove('hidden');
         },
-        hideStatus() { DOM.status.classList.add('hidden'); },
-        updateProgress(p) { DOM.progressFill.style.width=`${p}%`; DOM.progressBar.style.display=p>0&&p<100?'block':'none'; },
+
+        hideStatus() {
+            DOM.status.classList.add('hidden');
+        },
+
+        updateProgress(p) {
+            DOM.progressFill.style.width = `${p}%`;
+            DOM.progressBar.style.display = (p > 0 && p < 100) ? 'block' : 'none';
+        },
+
+        syncSession() {
+            const { count, processed } = Session;
+            const rem = Session.remaining();
+
+            if (count === 0) {
+                DOM.sessionBadge.classList.add('hidden');
+                DOM.progressSteps.classList.add('hidden');
+                DOM.extractionBadge.classList.add('hidden');
+            } else {
+                DOM.sessionBadge.classList.remove('hidden');
+                DOM.sessionCountText.textContent = `${count}/${MAX}`;
+                DOM.sessionRoomText.textContent = rem > 0 ? `(${rem} restantes)` : '(limite atingido)';
+                DOM.sessionBadge.classList.toggle('at-limit', rem === 0);
+                DOM.progressSteps.classList.remove('hidden');
+                DOM.progressSteps.innerHTML = Array.from({ length: count }, (_, i) => {
+                    const c = i < processed ? 'done' : i === processed ? 'active' : '';
+                    return `<span class="step-dot ${c}" title="Img ${i+1}"></span>`;
+                }).join('');
+                if (processed > 0) {
+                    DOM.extractionBadge.classList.remove('hidden');
+                    DOM.extractionBadgeText.textContent = `${processed} extração${processed !== 1 ? 'ões' : ''}`;
+                }
+            }
+
+            DOM.pasteHint.innerHTML = count === 0
+                ? `Suporta até <strong>10 extrações</strong> por sessão — cole um boleto de cada vez`
+                : rem > 0
+                    ? `✅ Cole mais <strong>${rem}</strong> imagem${rem !== 1 ? 'ns' : ''} nesta sessão`
+                    : `🚫 Limite de <strong>${MAX}</strong> atingido — clique "Limpar Tudo"`;
+        },
+
         updateCharCounter() {
             const t = DOM.output.value;
-            const d = (t.match(/\d/g)||[]).length, l = t.split('\n').filter(x=>x.trim()!=='').length;
+            const d = (t.match(/\d/g) || []).length;
+            const l = t.split('\n').filter(x => x.trim()).length;
             DOM.charCounter.textContent = `Dígitos: ${d} | Linhas: ${l}`;
             const has = t.trim().length > 0;
-            DOM.copyBtn.disabled = !has; DOM.cleanJoinBtn.disabled = !has;
+            DOM.copyBtn.disabled = !has;
+            DOM.cleanJoinBtn.disabled = !has;
         },
+
         renderHistory(history) {
             DOM.historyContainer.innerHTML = '';
-            if (!history.length) { DOM.historyContainer.innerHTML='<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>'; return; }
+            if (!history.length) {
+                DOM.historyContainer.innerHTML = '<p class="text-center text-sm text-slate-500">Nenhum histórico encontrado.</p>';
+                return;
+            }
+
             history.forEach(item => {
                 const div = document.createElement('div');
                 div.className = 'bg-slate-50 dark:bg-slate-700/50 p-3 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors border border-slate-200 dark:border-slate-700';
-                div.innerHTML = `<div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">${item.date}</div><div class="font-mono text-xs truncate text-slate-700 dark:text-slate-300">${item.content.replace(/\n/g,' ')}</div>`;
-                div.onclick = () => { DOM.output.value = item.content; UI.updateCharCounter(); UI.triggerSummary(); };
+                div.innerHTML = `<div class="flex justify-between items-center mb-1">
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">${item.date}</span>
+                    <span class="text-xs text-indigo-500">${item.lines || 0} linha${item.lines !== 1 ? 's' : ''}</span>
+                </div><div class="font-mono text-xs truncate text-slate-700 dark:text-slate-300">${item.content.replace(/\n/g, ' ').substring(0, 120)}</div>`;
+                div.onclick = () => {
+                    DOM.output.value = item.content;
+                    UI.updateCharCounter();
+                    SelectionPanel.parse();
+                    UI.triggerSummary();
+                };
                 DOM.historyContainer.appendChild(div);
             });
         },
+
         clearAll() {
+            Session.reset();
+            AppState.extraction.queue = [];
+            AppState.extraction.totalFiles = 0;
+            AppState.extraction.processedFiles = 0;
             DOM.output.value = '';
             const ctx = DOM.preview.getContext('2d');
-            if (ctx) ctx.clearRect(0,0,DOM.preview.width,DOM.preview.height);
-            DOM.preview.style.display='none'; DOM.preview.classList.add('hidden');
-            this.hideStatus(); this.updateProgress(0); this.updateCharCounter(); this.renderSummaryPanel([]);
+            if (ctx) ctx.clearRect(0, 0, DOM.preview.width, DOM.preview.height);
+            DOM.preview.style.display = 'none';
+            DOM.preview.classList.add('hidden');
+            this.hideStatus();
+            this.updateProgress(0);
+            this.updateCharCounter();
+            this.renderSummaryPanel([]);
+            SelectionPanel.clear();
         },
-        toggleTheme() { const d=DOM.body.classList.toggle('dark'); localStorage.setItem('theme',d?'dark':'light'); DOM.themeToggle.innerHTML=d?'<i class="fas fa-sun text-yellow-400"></i>':'🌙'; },
+
+        toggleTheme() {
+            const d = DOM.body.classList.toggle('dark');
+            localStorage.setItem('theme', d ? 'dark' : 'light');
+            DOM.themeToggle.innerHTML = d ? '<i class="fas fa-sun text-yellow-400"></i>' : '🌙';
+        },
+
         loadTheme() {
-            const s=localStorage.getItem('theme'), p=window.matchMedia('(prefers-color-scheme:dark)').matches;
-            if(s==='dark'||((!s)&&p)){ DOM.body.classList.add('dark'); DOM.themeToggle.innerHTML='<i class="fas fa-sun text-yellow-400"></i>'; }
-            else DOM.themeToggle.innerHTML='🌙';
+            const s = localStorage.getItem('theme');
+            const p = window.matchMedia('(prefers-color-scheme:dark)').matches;
+            if (s === 'dark' || (!s && p)) {
+                DOM.body.classList.add('dark');
+                DOM.themeToggle.innerHTML = '<i class="fas fa-sun text-yellow-400"></i>';
+            } else {
+                DOM.themeToggle.innerHTML = '🌙';
+            }
         },
-        setSignature() { DOM.signature.innerHTML=`Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre &copy; ${new Date().getFullYear()}`; },
+
+        setSignature() {
+            DOM.signature.innerHTML = `Feito com <i class="fas fa-heart text-red-500 mx-1"></i> por HAlexandre &copy; ${new Date().getFullYear()}`;
+        },
 
         renderSummaryPanel(decoded) {
-            if (!decoded || decoded.length === 0) { DOM.summaryPanel.classList.add('hidden'); DOM.summaryPanel.innerHTML=''; return; }
-            const cards = decoded.map(d => {
-                const bc = d.tipo.includes('NOTA')?'badge-nfe':d.tipo.includes('CONV')?'badge-convenio':'badge-boleto';
-                const fields = d.campos.map((c,i) => {
-                    const last = i===d.campos.length-1 && d.campos.length%2!==0;
-                    return `<div class="summary-field${last?' span2':''}"><span class="summary-label">${c.label}</span><span class="summary-value">${c.valor}</span></div>`;
+            if (!decoded || !decoded.length) {
+                DOM.summaryPanel.classList.add('hidden');
+                DOM.summaryPanel.innerHTML = '';
+                return;
+            }
+
+            let total = 0;
+            let ct = 0;
+            decoded.forEach(d => d.campos.forEach(c => {
+                if (c._raw > 0) {
+                    total += c._raw;
+                    ct++;
+                }
+            }));
+
+            const banner = ct > 1
+                ? `<div class="total-banner"><i class="fas fa-calculator"></i><span>Total de <strong>${ct}</strong> boleto${ct > 1 ? 's' : ''}: <strong>${total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></span></div>`
+                : '';
+
+            const cards = decoded.map((d, i) => {
+                const bc = d.tipo.includes('NOTA') ? 'badge-nfe-s' : d.tipo.includes('CONV') ? 'badge-conv-s' : 'badge-boleto-s';
+                const fields = d.campos.map((c, j) => {
+                    const last = j === d.campos.length - 1 && d.campos.length % 2 !== 0;
+                    return `<div class="summary-field${last ? ' span2' : ''}"><span class="summary-label">${c.label}</span><span class="summary-value">${c.valor}</span></div>`;
                 }).join('');
-                return `<div class="summary-card"><span class="summary-badge ${bc}">${d.icone}&nbsp;${d.tipo}</span><div class="summary-grid">${fields}</div></div>`;
+                const num = decoded.length > 1 ? `<span class="snum">${i+1}</span>` : '';
+                return `<div class="summary-card"><div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem">${num}<span class="summary-badge ${bc}">${d.icone} ${d.tipo}</span></div><div class="summary-grid">${fields}</div></div>`;
             }).join('');
-            DOM.summaryPanel.innerHTML = `<div class="summary-wrapper"><p class="summary-title">📋 Resumo detalhado das chaves detectadas</p><div class="summary-cards">${cards}</div></div>`;
+
+            DOM.summaryPanel.innerHTML = `<div class="summary-wrapper">${banner}<p class="summary-title">📋 Resumo detalhado</p><div class="summary-cards">${cards}</div></div>`;
             DOM.summaryPanel.classList.remove('hidden');
         },
 
         triggerSummary() {
-            const lines = DOM.output.value.split('\n').filter(l=>l.trim()), results = [];
+            const lines = DOM.output.value.split('\n').filter(l => l.trim());
+            const results = [];
+            const seen = new Set();
+
             lines.forEach(line => {
-                const clean=line.replace(/\D/g,''), len=clean.length;
-                if ((len===47||len===48) && line.includes('BOLETO')) { const d=Logic.decodificarBoleto(clean); if(d) results.push(d); }
-                else if (len===44 && line.includes('CBARRAS'))        { const d=Logic.decodificarBoleto(clean); if(d) results.push(d); }
-                else if (len===44 && line.includes('NFe'))             { const d=Logic.decodificarNFe(clean);    if(d) results.push(d); }
+                const clean = line.replace(/\D/g, '');
+                const len = clean.length;
+                if (!clean || seen.has(clean)) return;
+                seen.add(clean);
+
+                if (len === 47 || len === 48) {
+                    const d = Logic.decodificarBoleto(clean);
+                    if (d) results.push(d);
+                } else if (len === 44) {
+                    const cUF = parseInt(clean.substring(0, 2));
+                    const mod = clean.substring(20, 22);
+                    const isNFe = cUF >= 11 && cUF <= 53 && (mod === '55' || mod === '65');
+                    const d = isNFe ? Logic.decodificarNFe(clean) : Logic.decodificarBoleto(clean);
+                    if (d) results.push(d);
+                }
             });
+
             this.renderSummaryPanel(results);
         }
     };
+
     const Logic = {
-        modulo10(num) {
-            let soma=0, mult=2;
-            for(let i=num.length-1;i>=0;i--){ let r=parseInt(num[i])*mult; soma+=r>9?r-9:r; mult=mult===2?1:2; }
-            const r=soma%10; return r===0?0:10-r;
+        mod10(n) {
+            let s = 0, m = 2;
+            for (let i = n.length - 1; i >= 0; i--) {
+                let r = +n[i] * m;
+                s += r > 9 ? r - 9 : r;
+                m = m === 2 ? 1 : 2;
+            }
+            const r = s % 10;
+            return r === 0 ? 0 : 10 - r;
         },
-        modulo11(num, base=9) {
-            let soma=0, mult=2;
-            for(let i=num.length-1;i>=0;i--){ soma+=parseInt(num[i])*mult; mult=mult>=base?2:mult+1; }
-            const r=soma%11;
-            if(r===0||r===1) return base===9?1:0;
-            return 11-r;
+
+        mod11(n, base = 9) {
+            let s = 0, m = 2;
+            for (let i = n.length - 1; i >= 0; i--) {
+                s += +n[i] * m;
+                m = m >= base ? 2 : m + 1;
+            }
+            const r = s % 11;
+            if (r === 0 || r === 1) return base === 9 ? 1 : 0;
+            return 11 - r;
         },
-        validarBoleto(chave) {
-            if(chave.length===44){
-                if(chave[3]!=='9') return false;
-                const dv=parseInt(chave[4]), sem=chave.substring(0,4)+chave.substring(5), calc=this.modulo11(sem,9);
-                return calc===dv||((calc===0||calc===1)&&(dv===0||dv===1));
+
+        validarBoleto(c) {
+            if (c.length === 44) {
+                if (c[3] !== '9') return false;
+                const dv = +c[4];
+                const sem = c.substring(0, 4) + c.substring(5);
+                const calc = this.mod11(sem);
+                return calc === dv || ((calc === 0 || calc === 1) && (dv === 0 || dv === 1));
             }
-            if(chave.length===47){
-                const c1=chave.substring(0,9),dv1=parseInt(chave[9]),c2=chave.substring(10,20),dv2=parseInt(chave[20]);
-                const c3=chave.substring(21,31),dv3=parseInt(chave[31]),dv=parseInt(chave[32]);
-                const cb=chave.substring(0,4)+chave.substring(33,47)+chave.substring(4,9)+chave.substring(10,20)+chave.substring(21,31);
-                const calc=this.modulo11(cb,9);
-                return this.modulo10(c1)===dv1&&this.modulo10(c2)===dv2&&this.modulo10(c3)===dv3&&(calc===dv||((calc===0||calc===1)&&(dv===0||dv===1)));
+
+            if (c.length === 47) {
+                const dv = +c[32];
+                const cb = c.substring(0,4)+c.substring(33,47)+c.substring(4,9)+c.substring(10,20)+c.substring(21,31);
+                const calc = this.mod11(cb);
+                return this.mod10(c.substring(0,9)) === +c[9] &&
+                       this.mod10(c.substring(10,20)) === +c[20] &&
+                       this.mod10(c.substring(21,31)) === +c[31] &&
+                       (calc === dv || ((calc===0||calc===1)&&(dv===0||dv===1)));
             }
-            if(chave.length===48){
-                return this.modulo10(chave.substring(0,11))===parseInt(chave[11])&&
-                       this.modulo10(chave.substring(12,23))===parseInt(chave[23])&&
-                       this.modulo10(chave.substring(24,35))===parseInt(chave[35])&&
-                       this.modulo10(chave.substring(36,47))===parseInt(chave[47]);
+
+            if (c.length === 48) {
+                return this.mod10(c.substring(0,11)) === +c[11] &&
+                       this.mod10(c.substring(12,23)) === +c[23] &&
+                       this.mod10(c.substring(24,35)) === +c[35] &&
+                       this.mod10(c.substring(36,47)) === +c[47];
             }
+
             return false;
         },
+
         classify(num) {
-            const clean=num.replace(/\D/g,''), len=clean.length; let label='';
-            if(len===47||len===48) label=this.validarBoleto(clean)?'BOLETO (VÁLIDO ✅)':'BOLETO (INVÁLIDO ❌)';
-            else if(len===44) label=this.validarBoleto(clean)?'BOLETO CBARRAS (VÁLIDO ✅)':'NFe';
-            else if(len===14) label='CNPJ';
-            else if(len===11) label='CPF';
-            return label?`${num}   | ${label}`:num;
+            const c = num.replace(/\D/g, '');
+            const len = c.length;
+            let label = '';
+            if (len === 47 || len === 48) {
+                label = this.validarBoleto(c) ? 'BOLETO (VÁLIDO ✅)' : 'BOLETO (INVÁLIDO ❌)';
+            } else if (len === 44) {
+                const cUF = parseInt(c.substring(0,2));
+                const mod = c.substring(20,22);
+                label = (cUF>=11&&cUF<=53&&(mod==='55'||mod==='65'))
+                    ? 'NFe'
+                    : (this.validarBoleto(c) ? 'BOLETO CBARRAS (VÁLIDO ✅)' : 'BOLETO CBARRAS (INVÁLIDO ❌)');
+            } else if (len === 14) {
+                label = 'CNPJ';
+            } else if (len === 11) {
+                label = 'CPF';
+            }
+            return label ? `${num}   | ${label}` : num;
         },
-        stripLabels(text){ return text.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)/g,''); },
+
+        stripLabels(t) {
+            return t.replace(/\s+\|\s+(BOLETO.*?|NFe|CNPJ|CPF)[^\n]*/g, '');
+        },
 
         BANCOS: {
-            '001':'Banco do Brasil','003':'Banco da Amazônia','004':'Banco do Nordeste',
-            '033':'Santander','041':'Banrisul','047':'Banese','070':'BRB','077':'Inter',
-            '085':'Ailos / Cecred','099':'Uniprime','104':'Caixa Econômica Federal',
-            '133':'Cresol','136':'Unicred','197':'Stone','208':'BTG Pactual',
-            '212':'Banco Original','218':'BS2','237':'Bradesco','260':'Nubank',
-            '290':'PagSeguro','301':'PJBank','318':'BMG','323':'MercadoPago',
-            '336':'C6 Bank','341':'Itaú','364':'Gerencianet / Efí','380':'PicPay',
-            '389':'Mercantil do Brasil','422':'Banco Safra','623':'Banco PAN',
-            '633':'Rendimento','655':'Votorantim','707':'Daycoval','748':'Sicredi','756':'Sicoob',
+            '001':'Banco do Brasil','033':'Santander','041':'Banrisul','070':'BRB','077':'Inter',
+            '085':'Ailos/Cecred','099':'Uniprime','104':'Caixa Econômica Federal','133':'Cresol',
+            '136':'Unicred','197':'Stone','208':'BTG Pactual','212':'Banco Original','218':'BS2',
+            '237':'Bradesco','260':'Nubank','290':'PagSeguro','301':'PJBank','318':'BMG',
+            '323':'MercadoPago','336':'C6 Bank','341':'Itaú','364':'Efí/Gerencianet','380':'PicPay',
+            '389':'Mercantil do Brasil','422':'Safra','623':'Banco PAN','633':'Rendimento',
+            '655':'Votorantim','707':'Daycoval','748':'Sicredi','756':'Sicoob'
         },
+
         ESTADOS: {
             '11':'Rondônia (RO)','12':'Acre (AC)','13':'Amazonas (AM)','14':'Roraima (RR)',
             '15':'Pará (PA)','16':'Amapá (AP)','17':'Tocantins (TO)','21':'Maranhão (MA)',
-            '22':'Piauí (PI)','23':'Ceará (CE)','24':'Rio Grande do Norte (RN)',
-            '25':'Paraíba (PB)','26':'Pernambuco (PE)','27':'Alagoas (AL)',
-            '28':'Sergipe (SE)','29':'Bahia (BA)','31':'Minas Gerais (MG)',
-            '32':'Espírito Santo (ES)','33':'Rio de Janeiro (RJ)','35':'São Paulo (SP)',
-            '41':'Paraná (PR)','42':'Santa Catarina (SC)','43':'Rio Grande do Sul (RS)',
-            '50':'Mato Grosso do Sul (MS)','51':'Mato Grosso (MT)',
-            '52':'Goiás (GO)','53':'Distrito Federal (DF)',
+            '22':'Piauí (PI)','23':'Ceará (CE)','24':'Rio Grande do Norte (RN)','25':'Paraíba (PB)',
+            '26':'Pernambuco (PE)','27':'Alagoas (AL)','28':'Sergipe (SE)','29':'Bahia (BA)',
+            '31':'Minas Gerais (MG)','32':'Espírito Santo (ES)','33':'Rio de Janeiro (RJ)',
+            '35':'São Paulo (SP)','41':'Paraná (PR)','42':'Santa Catarina (SC)',
+            '43':'Rio Grande do Sul (RS)','50':'Mato Grosso do Sul (MS)','51':'Mato Grosso (MT)',
+            '52':'Goiás (GO)','53':'Distrito Federal (DF)'
         },
 
-        /* ════════════════════════════════════════════════════════════
-           DECODIFICADOR DE BOLETO
-           FIX VENCIMENTO — suporte aos dois ciclos FEBRABAN:
-             • Ciclo antigo : base 07/10/1997  (fator 0001–9999, expirou 21/02/2025)
-             • Ciclo novo   : base 29/05/2022  (fator reiniciado a partir de 22/02/2025)
-           Lógica: calcula com a base antiga; se a data cair em 21/02/2025 ou antes,
-           recalcula com a base nova (estamos certamente no novo ciclo).
-           ════════════════════════════════════════════════════════════ */
         decodificarBoleto(chave) {
             const len = chave.length;
-            const fmtR = v => v === 0 ? 'Não informado'
-                : v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+            const fmtR = v => v === 0 ? 'Não informado' : v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
-            /* ── FIX: cálculo de vencimento com detecção de ciclo ── */
-                        const calcVenc = fator => {
-                if (!fator) return 'Sem vencimento fixo';
-
-                // Regra FEBRABAN antiga: dias desde 07/10/1997 [web:13]
-                // Nova regra a partir de 22/02/2025: fator reinicia em 1000 [page:1][web:5]
-                // Portanto, para fatores >= 1000 em boletos atuais, a nova base equivalente é 29/05/2022,
-                // pois 29/05/2022 + 1000 dias = 22/02/2025 [web:11].
-
-                if (fator >= 1000) {
-                    const baseNova = new Date(2022, 4, 29);
-                    baseNova.setDate(baseNova.getDate() + fator);
-                    return baseNova.toLocaleDateString('pt-BR');
-                }
-
-                const baseAntiga = new Date(1997, 9, 7);
-                baseAntiga.setDate(baseAntiga.getDate() + fator);
-                return baseAntiga.toLocaleDateString('pt-BR');
+            const venc = f => {
+                if (!f) return 'Sem vencimento fixo';
+                // Correção Fuso Horário usando Date.UTC
+                const b = f >= 1000 ? new Date(Date.UTC(2022,4,29)) : new Date(Date.UTC(1997,9,7));
+                b.setUTCDate(b.getUTCDate() + f);
+                return b.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
             };
 
             if (len === 47) {
-                const banco = chave.substring(0, 3);
-                const fator = parseInt(chave.substring(33, 37));
-                const valor = parseInt(chave.substring(37, 47)) / 100;
-                return { icone:'💰', tipo:'BOLETO BANCÁRIO', campos:[
-                    { label:'🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
-                    { label:'💰 Valor',          valor: fmtR(valor) },
-                    { label:'📅 Vencimento',     valor: calcVenc(fator) },
-                    { label:'📋 Formato',        valor: 'Linha Digitável (47 díg.)' },
-                ]};
+                const banco = chave.substring(0,3);
+                const fator = parseInt(chave.substring(33,37));
+                const valor = parseInt(chave.substring(37,47))/100;
+                return {
+                    icone:'💰',
+                    tipo:'BOLETO BANCÁRIO',
+                    campos:[
+                        { label:'🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
+                        { label:'💰 Valor', valor: fmtR(valor), _raw: valor },
+                        { label:'📅 Vencimento', valor: venc(fator) },
+                        { label:'📋 Formato', valor: 'Linha Digitável (47 díg.)' }
+                    ]
+                };
             }
+
             if (len === 44) {
-                const banco = chave.substring(0, 3);
-                const fator = parseInt(chave.substring(5, 9));
-                const valor = parseInt(chave.substring(9, 19)) / 100;
-                return { icone:'💰', tipo:'BOLETO BANCÁRIO', campos:[
-                    { label:'🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
-                    { label:'💰 Valor',          valor: fmtR(valor) },
-                    { label:'📅 Vencimento',     valor: calcVenc(fator) },
-                    { label:'📋 Formato',        valor: 'Código de Barras (44 díg.)' },
-                ]};
+                const banco = chave.substring(0,3);
+                const fator = parseInt(chave.substring(5,9));
+                const valor = parseInt(chave.substring(9,19))/100;
+                return {
+                    icone:'💰',
+                    tipo:'BOLETO BANCÁRIO',
+                    campos:[
+                        { label:'🏦 Banco emissor', valor: this.BANCOS[banco] ? `${banco} – ${this.BANCOS[banco]}` : `Código ${banco}` },
+                        { label:'💰 Valor', value: fmtR(valor), valor: fmtR(valor), _raw: valor },
+                        { label:'📅 Vencimento', valor: venc(fator) },
+                        { label:'📋 Formato', valor: 'Cód. Barras (44 díg.)' }
+                    ]
+                };
             }
+
             if (len === 48) {
-                const seg=chave[0], vid=chave[1];
-                const valorN   = parseInt(chave.substring(2,13));
-                const valorFmt = ['6','7','8'].includes(vid) ? fmtR(valorN/100) : 'Sem valor fixo';
-                const tipoSeg  = seg==='8' ? 'Arrecadação c/ CNPJ' : 'Concessionária / Convênio';
-                const vidDesc  = vid==='6'?'Valor em Reais':vid==='7'?'Quantidade':vid==='8'?'Valor de referência':'Sem valor';
-                return { icone:'💳', tipo:'BOLETO CONVÊNIO', campos:[
-                    { label:'🏢 Tipo',         valor: tipoSeg },
-                    { label:'💰 Valor',         valor: valorFmt },
-                    { label:'🔢 Identificador', valor: vidDesc },
-                ]};
+                const seg = chave[0];
+                const vid = chave[1];
+                const vN = parseInt(chave.substring(2,13));
+                const raw = ['6','7','8'].includes(vid) ? vN/100 : 0;
+                return {
+                    icone:'💳',
+                    tipo:'BOLETO CONVÊNIO',
+                    campos:[
+                        { label:'🏢 Tipo', valor: seg==='8'?'Arrecadação c/ CNPJ':'Concessionária/Convênio' },
+                        { label:'💰 Valor', valor: raw ? fmtR(raw) : 'Sem valor fixo', _raw: raw },
+                        { label:'🔢 Identificador', valor: vid==='6'?'Valor em Reais':vid==='7'?'Quantidade':'Valor de referência' }
+                    ]
+                };
             }
+
             return null;
         },
 
         decodificarNFe(chave) {
             if (chave.length !== 44) return null;
-            const cUF=chave.substring(0,2), AAMM=chave.substring(2,6), cnpj=chave.substring(6,20);
-            const mod=chave.substring(20,22), serie=parseInt(chave.substring(22,25)), nNF=parseInt(chave.substring(25,34)), tpEmis=chave[34];
-            const ano='20'+AAMM.substring(0,2), mes=parseInt(AAMM.substring(2,4));
-            const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-            const cnpjFmt=cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,'$1.$2.$3/$4-$5');
-            const modelo=mod==='55'?'NF-e (mod. 55)':mod==='65'?'NFC-e / Cupom (mod. 65)':`Modelo ${mod}`;
-            const emissoes={'1':'Normal','2':'Contingência FS','3':'Contingência SCAN','4':'Contingência DPEC','5':'Contingência FS-DA','6':'Contingência SVC-AN','7':'Contingência SVC-RS','9':'Contingência off-line'};
-            return { icone:'📄', tipo:'NOTA FISCAL ELETRÔNICA', campos:[
-                { label:'🗺️ Estado emissor', valor: this.ESTADOS[cUF]||`cUF ${cUF}` },
-                { label:'📅 Mês / Ano',       valor: `${meses[mes-1]||mes} / ${ano}` },
-                { label:'🏢 CNPJ emissor',    valor: cnpjFmt },
-                { label:'📄 Modelo',           valor: modelo },
-                { label:'📁 Série',            valor: String(serie) },
-                { label:'🔢 Número da NF',     valor: nNF.toLocaleString('pt-BR') },
-                { label:'⚡ Tipo de emissão',  valor: emissoes[tpEmis]||`Código ${tpEmis}` },
-            ]};
+            const cUF = chave.substring(0,2);
+            const AAMM = chave.substring(2,6);
+            const cnpj = chave.substring(6,20);
+            const mod = chave.substring(20,22);
+            const serie = parseInt(chave.substring(22,25));
+            const nNF = parseInt(chave.substring(25,34));
+            const te = chave[34];
+            const ano = '20'+AAMM.substring(0,2);
+            const mes = parseInt(AAMM.substring(2,4));
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            const cnpjF = cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+            const emis = {'1':'Normal','2':'Conting. FS','3':'Conting. SCAN','4':'Conting. DPEC','5':'Conting. FS-DA','6':'Conting. SVC-AN','7':'Conting. SVC-RS','9':'Conting. off-line'};
+
+            return {
+                icone:'📄',
+                tipo:'NOTA FISCAL ELETRÔNICA',
+                campos:[
+                    { label:'🗺️ Estado emissor', valor: this.ESTADOS[cUF] || `cUF ${cUF}` },
+                    { label:'📅 Mês / Ano', valor: `${meses[mes-1]||mes} / ${ano}` },
+                    { label:'🏢 CNPJ emissor', valor: cnpjF },
+                    { label:'📄 Modelo', valor: mod==='55'?'NF-e (mod. 55)':mod==='65'?'NFC-e (mod. 65)':`Modelo ${mod}` },
+                    { label:'📁 Série', valor: String(serie) },
+                    { label:'🔢 Número da NF', valor: nNF.toLocaleString('pt-BR') },
+                    { label:'⚡ Tipo emissão', valor: emis[te] || `Código ${te}` }
+                ]
+            };
         },
 
         async copyToClipboard(text) {
-            if(!text||!text.trim()) return false;
-            try { await navigator.clipboard.writeText(text); return true; }
-            catch { const a=document.createElement('textarea'); a.value=text; document.body.appendChild(a); a.select(); const ok=document.execCommand('copy'); document.body.removeChild(a); return ok; }
+            if (!text || !text.trim()) return false;
+            
+            // Clipboard API (Método Moderno)
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (err) {
+                    console.warn('Falha no Clipboard API, usando fallback.', err);
+                }
+            }
+
+            // Fallback Method
+            try {
+                const a = document.createElement('textarea');
+                a.value = text;
+                a.style.position = 'fixed'; // Evita scroll ao focar
+                a.style.opacity = '0';
+                document.body.appendChild(a);
+                a.focus();
+                a.select();
+                const ok = document.execCommand('copy');
+                document.body.removeChild(a);
+                return ok;
+            } catch (err) {
+                console.error('Fallback falhou.', err);
+                return false;
+            }
         },
-        getHistory()      { return JSON.parse(localStorage.getItem('ocrHistory')||'[]'); },
+
+        getHistory() {
+            return JSON.parse(localStorage.getItem('ocrHistory') || '[]');
+        },
+
         saveHistory(text) {
-            if(!text.trim()) return;
-            let h=this.getHistory();
-            if(h.length>0&&h[0].content===text) return;
-            h.unshift({date:new Date().toLocaleString('pt-BR'),content:text});
-            localStorage.setItem('ocrHistory',JSON.stringify(h.slice(0,5)));
+            if (!text.trim()) return;
+            let h = this.getHistory();
+            const lines = text.split('\n').filter(l => l.trim()).length;
+            if (h.length > 0 && h[0].content === text) return;
+            h.unshift({ date: new Date().toLocaleString('pt-BR'), content: text, lines });
+            localStorage.setItem('ocrHistory', JSON.stringify(h.slice(0, 10)));
         },
-        getRotatedImageBlob() {
-            return new Promise(resolve=>{
-                const c=document.createElement('canvas'),ctx=c.getContext('2d'),img=new Image();
-                img.onload=()=>{
-                    const rad=(AppState.rotation.current*Math.PI)/180, sin=Math.abs(Math.sin(rad)), cos=Math.abs(Math.cos(rad));
-                    c.width=img.width*cos+img.height*sin; c.height=img.width*sin+img.height*cos;
-                    ctx.translate(c.width/2,c.height/2); ctx.rotate(rad);
-                    ctx.drawImage(img,-img.width/2,-img.height/2); c.toBlob(resolve,'image/png');
+
+        getRotatedBlob() {
+            return new Promise(res => {
+                const c = document.createElement('canvas');
+                const ctx = c.getContext('2d');
+                const img = new Image();
+                img.onload = () => {
+                    const rad = AppState.rotation.current * Math.PI / 180;
+                    const sin = Math.abs(Math.sin(rad));
+                    const cos = Math.abs(Math.cos(rad));
+                    c.width = img.width * cos + img.height * sin;
+                    c.height = img.width * sin + img.height * cos;
+                    ctx.translate(c.width/2, c.height/2);
+                    ctx.rotate(rad);
+                    ctx.drawImage(img, -img.width/2, -img.height/2);
+                    c.toBlob(res, 'image/png');
                 };
-                img.src=AppState.rotation.originalData;
+                img.src = AppState.rotation.originalData;
             });
         }
     };
+
     const Rotator = {
         showNext() {
-            const file=AppState.extraction.queue.shift();
-            if(file){ const r=new FileReader(); r.onload=e=>{ AppState.rotation.originalData=e.target.result; DOM.rotatableImage.src=e.target.result; this.reset(); DOM.rotationModal.classList.remove('hidden'); }; r.readAsDataURL(file); }
-            else Extractor.finalize();
+            const file = AppState.extraction.queue.shift();
+            if (!file) {
+                Extractor.finalize();
+                return;
+            }
+            const cur = AppState.extraction.processedFiles + 1;
+            const tot = AppState.extraction.totalFiles;
+            DOM.rotationModalTitle.textContent = 'Ajustar Rotação da Imagem';
+            DOM.rotationModalSub.textContent = tot > 1
+                ? `Imagem ${cur} de ${tot} • Sessão ${Session.processed+1}/${Session.count}`
+                : Session.count > 1 ? `Sessão: ${Session.processed+1}/${Session.count}` : '';
+            const r = new FileReader();
+            r.onload = e => {
+                AppState.rotation.originalData = e.target.result;
+                DOM.rotatableImage.src = e.target.result;
+                this.reset();
+                DOM.rotationModal.classList.remove('hidden');
+            };
+            r.readAsDataURL(file);
         },
-        hide()   { DOM.rotationModal.classList.add('hidden'); },
-        update() { DOM.rotatableImage.style.transform=`rotate(${AppState.rotation.current}deg)`; DOM.angleDisplay.textContent=`${AppState.rotation.current.toFixed(1)}°`; DOM.rotationSlider.value=AppState.rotation.current; },
-        adjust(a){ let n=AppState.rotation.current+a; if(n>180)n=180; if(n<-180)n=-180; AppState.rotation.current=n; this.update(); },
-        reset()  { AppState.rotation.current=0; this.update(); }
+
+        hide() {
+            DOM.rotationModal.classList.add('hidden');
+        },
+
+        update() {
+            DOM.rotatableImage.style.transform = `rotate(${AppState.rotation.current}deg)`;
+            DOM.angleDisplay.textContent = `${AppState.rotation.current.toFixed(1)}°`;
+            DOM.rotationSlider.value = AppState.rotation.current;
+        },
+
+        adjust(a) {
+            let n = AppState.rotation.current + a;
+            n = Math.min(180, Math.max(-180, n));
+            AppState.rotation.current = n;
+            this.update();
+        },
+
+        reset() {
+            AppState.rotation.current = 0;
+            this.update();
+        }
     };
 
     const Extractor = {
         start(files) {
-            AppState.extraction.queue=Array.from(files); AppState.extraction.totalFiles=files.length; AppState.extraction.processedFiles=0;
-            UI.clearAll(); Rotator.showNext();
+            const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (!imgs.length) return;
+            if (!Session.hasRoom()) {
+                UI.showStatus(`🚫 Limite de ${MAX} imagens atingido. Clique "Limpar Tudo".`, 'error');
+                return;
+            }
+
+            const toProcess = imgs.slice(0, Session.remaining());
+            AppState.extraction.queue = toProcess;
+            AppState.extraction.totalFiles = toProcess.length;
+            AppState.extraction.processedFiles = 0;
+            Session.add(toProcess.length);
+            Rotator.showNext();
         },
+
         async processCurrentImage(blob) {
-            const file=new File([blob],'processed.png',{type:'image/png'});
+            const file = new File([blob], 'img.png', { type: 'image/png' });
             AppState.extraction.processedFiles++;
-            const pt=AppState.extraction.totalFiles>1?`(${AppState.extraction.processedFiles} de ${AppState.extraction.totalFiles})`:'';
-            UI.showStatus(`A processar ${pt}...`,'processing');
-            const url=URL.createObjectURL(file);
+            Session.tick();
+            const pt = `(${AppState.extraction.processedFiles}/${AppState.extraction.totalFiles})`;
+            UI.showStatus(`🔍 A processar ${pt}…`, 'processing');
+            const url = URL.createObjectURL(file);
+            let found = false;
+            let w = null; // Worker reference
+
             try {
-                const pre=await this.preprocessImage(url); let found=false;
+                const pre = await this.preprocess(url);
+
                 try {
-                    const cr=new ZXing.BrowserMultiFormatReader(), res=await cr.decodeFromImageUrl(pre);
-                    if(res?.getText()){ DOM.output.value+=(DOM.output.value?'\n':'')+Logic.classify(res.getText()); found=true; }
-                } catch{}
-                if(!found){
-                    UI.showStatus(`🔍 Lendo texto... ${pt}`,'processing');
-                    const w=await Tesseract.createWorker({logger:m=>{ if(m.status==='recognizing text') UI.updateProgress(50+Math.round(m.progress*50)); }});
-                    await w.loadLanguage('por'); await w.initialize('por');
-                    await w.setParameters({tessedit_char_whitelist:'0123456789'});
-                    const {data}=await w.recognize(pre); await w.terminate();
-                    const all=data.text.replace(/\D/g,'');
-                    if(all.length===47||all.length===48||all.length===44){
-                        DOM.output.value+=(DOM.output.value?'\n':'')+Logic.classify(all); found=true;
+                    const cr = new ZXing.BrowserMultiFormatReader();
+                    const res = await cr.decodeFromImageUrl(pre);
+                    if (res?.getText()) {
+                        this.append(Logic.classify(res.getText()));
+                        found = true;
+                    }
+                } catch {}
+
+                if (!found) {
+                    UI.showStatus(`🔍 Analisando imagem via OCR ${pt}…`, 'processing');
+                    w = await Tesseract.createWorker({
+                        logger: m => {
+                            // Feedback de progresso e download de idioma
+                            if (m.status === 'recognizing text') {
+                                UI.updateProgress(50 + Math.round(m.progress * 50));
+                            } else if (m.status.includes('loading') || m.status.includes('downloading')) {
+                                UI.showStatus(`📥 Preparando motor OCR (${Math.round(m.progress * 100)}%)... Na 1ª vez pode demorar um pouquinho!`, 'processing');
+                                UI.updateProgress(Math.round(m.progress * 50));
+                            }
+                        }
+                    });
+
+                    await w.loadLanguage('por');
+                    await w.initialize('por');
+                    await w.setParameters({ tessedit_char_whitelist: '0123456789' });
+                    
+                    UI.showStatus(`🔍 Lendo texto na imagem ${pt}…`, 'processing');
+                    const { data } = await w.recognize(pre);
+
+                    const all = data.text.replace(/\D/g, '');
+                    if ([44,47,48].includes(all.length)) {
+                        this.append(Logic.classify(all));
+                        found = true;
                     } else {
-                        const nums=data.text.match(/\d+/g);
-                        if(nums?.length){ DOM.output.value+=(DOM.output.value?'\n':'')+[...new Set(nums)].map(n=>Logic.classify(n)).join('\n'); found=true; }
+                        const ns = data.text.match(/\d+/g);
+                        if (ns?.length) {
+                            this.append([...new Set(ns)].map(n => Logic.classify(n)).join('\n'));
+                            found = true;
+                        }
                     }
                 }
-                if(!found) UI.showStatus('⚠️ Nada encontrado nesta imagem.','error');
-            } catch(e){ console.error(e); UI.showStatus('❌ Erro ao processar a imagem.','error'); }
-            finally{ URL.revokeObjectURL(url); UI.updateProgress(100); Rotator.showNext(); }
+
+                if (!found) UI.showStatus('⚠️ Nada encontrado nesta imagem.', 'error');
+            } catch (e) {
+                console.error(e);
+                if (e.message && e.message.includes('CORS')) {
+                    UI.showStatus('❌ Erro: Não foi possível processar devido a bloqueio de segurança (CORS) na imagem colada.', 'error');
+                } else {
+                    UI.showStatus('❌ Erro ao processar imagem.', 'error');
+                }
+            } finally {
+                if (w) await w.terminate(); // Libera memória rigorosamente
+                URL.revokeObjectURL(url);
+                UI.updateProgress(100);
+                Rotator.showNext();
+            }
         },
+
+        append(text) {
+            const cur = DOM.output.value;
+            DOM.output.value = cur.trim() ? cur.trimEnd() + '\n' + text : text;
+        },
+
         finalize() {
-            if(DOM.output.value.trim()){ UI.showStatus('✅ Extração concluída!','success'); Logic.saveHistory(DOM.output.value); UI.renderHistory(Logic.getHistory()); }
+            if (DOM.output.value.trim()) {
+                UI.showStatus(Session.processed > 1 ? `✅ ${Session.processed} extrações concluídas!` : '✅ Extração concluída!', 'success');
+                Logic.saveHistory(DOM.output.value);
+                UI.renderHistory(Logic.getHistory());
+            }
             UI.updateCharCounter();
+            SelectionPanel.parse();
             UI.triggerSummary();
+            UI.syncSession();
         },
-        preprocessImage(src) {
-            return new Promise((res,rej)=>{ const img=new Image(); img.crossOrigin='Anonymous';
-                img.onload=()=>{ const c=DOM.preview,ctx=c.getContext('2d'); c.width=img.width; c.height=img.height; ctx.filter='grayscale(1) contrast(1.5)'; ctx.drawImage(img,0,0); c.classList.remove('hidden'); c.style.display='block'; res(c.toDataURL('image/png')); };
-                img.onerror=rej; img.src=src; });
+
+        preprocess(src) {
+            return new Promise((res, rej) => {
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                img.onload = () => {
+                    const c = DOM.preview;
+                    const ctx = c.getContext('2d');
+                    c.width = img.width;
+                    c.height = img.height;
+                    ctx.filter = 'grayscale(1) contrast(1.5)';
+                    ctx.drawImage(img, 0, 0);
+                    c.classList.remove('hidden');
+                    c.style.display = 'block';
+                    res(c.toDataURL('image/png'));
+                };
+                img.onerror = () => rej(new Error("Erro de carregamento ou bloqueio CORS da imagem."));
+                img.src = src;
+            });
         }
     };
 
-    const Events = {
-        setup() {
-            const handleFiles=files=>{ const imgs=Array.from(files).filter(f=>f.type.startsWith('image/')); if(imgs.length) Extractor.start(imgs); };
-            document.addEventListener('paste',e=>{ if(!DOM.rotationModal.classList.contains('hidden')) return; const f=[...(e.clipboardData?.items||[])].map(i=>i.getAsFile()).find(f=>f?.type.startsWith('image/')); if(f){e.preventDefault();Extractor.start([f]);} });
-            DOM.pasteArea.addEventListener('click',()=>DOM.fileInput.click());
-            DOM.pasteArea.addEventListener('dragover',e=>{e.preventDefault();DOM.pasteArea.classList.add('border-indigo-500');});
-            DOM.pasteArea.addEventListener('dragleave',()=>DOM.pasteArea.classList.remove('border-indigo-500'));
-            DOM.pasteArea.addEventListener('drop',e=>{e.preventDefault();DOM.pasteArea.classList.remove('border-indigo-500');if(e.dataTransfer.files)handleFiles(e.dataTransfer.files);});
-            DOM.fileInput.addEventListener('change',e=>{if(e.target.files.length)handleFiles(e.target.files);});
-            DOM.cleanJoinBtn.addEventListener('click',()=>{
-                const raw=DOM.output.value; if(!raw.trim()) return;
-                const u=[...new Set(Logic.stripLabels(raw).match(/\d+/g)||[])];
-                DOM.output.value=u.map(n=>Logic.classify(n)).join('\n');
-                UI.updateCharCounter(); UI.triggerSummary();
-                const btn=DOM.cleanJoinBtn, orig=btn.innerHTML;
-                btn.innerHTML='<i class="fas fa-check mr-2"></i>Limpo!';
-                setTimeout(()=>btn.innerHTML=orig,1500);
-            });
-            DOM.copyBtn.addEventListener('click',async()=>{
-                const ok=await Logic.copyToClipboard(Logic.stripLabels(DOM.output.value));
-                if(ok){ const btn=DOM.copyBtn, orig=btn.innerHTML; btn.innerHTML='<i class="fas fa-check mr-2"></i>Copiado!'; btn.classList.replace('bg-blue-600','bg-green-600'); setTimeout(()=>{btn.innerHTML=orig;btn.classList.replace('bg-green-600','bg-blue-600');},2000); }
-            });
-            DOM.clearBtn.addEventListener('click',()=>UI.clearAll());
-            DOM.themeToggle.addEventListener('click',()=>UI.toggleTheme());
-            DOM.output.addEventListener('input',()=>{ UI.updateCharCounter(); UI.triggerSummary(); });
-            DOM.rotationSlider.addEventListener('input',e=>{ AppState.rotation.current=parseFloat(e.target.value); Rotator.update(); });
-            DOM.quickBtns.forEach(b=>b.addEventListener('click',e=>{ const a=parseFloat(e.currentTarget.dataset.angle); a===0?Rotator.reset():Rotator.adjust(a); }));
-            DOM.closeModalBtn.addEventListener('click',()=>{ Rotator.hide(); AppState.extraction.queue=[]; });
-            DOM.cancelRotationBtn.addEventListener('click',()=>DOM.closeModalBtn.click());
-            DOM.confirmRotationBtn.addEventListener('click',async()=>{ Rotator.hide(); await Extractor.processCurrentImage(await Logic.getRotatedImageBlob()); });
-            DOM.linkButtons.forEach(btn=>btn.addEventListener('click',async e=>{
-                e.preventDefault(); const el=e.currentTarget, pt=el.dataset.pattern;
-                const m=DOM.output.value.replace(/\D/g,'').match(new RegExp(pt));
-                if(m){ window.open(el.href,'_blank'); await Logic.copyToClipboard(m[0]); UI.showStatus(`✅ Copiado: ${m[0]}`,'success'); }
-                else UI.showStatus('⚠️ Padrão não encontrado no texto extraído.','error');
-            }));
-        }
-    };
+    (() => {
+        const handle = files => {
+            const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (imgs.length) Extractor.start(imgs);
+        };
 
-    UI.init(); Events.setup(); UI.updateCharCounter();
+        document.addEventListener('paste', e => {
+            if (!DOM.rotationModal.classList.contains('hidden')) return;
+            const f = [...(e.clipboardData?.items || [])]
+                .map(i => i.getAsFile())
+                .find(f => f?.type.startsWith('image/'));
+            if (f) {
+                e.preventDefault();
+                Extractor.start([f]);
+            }
+        });
+
+        DOM.pasteArea.addEventListener('click', () => {
+            if (!Session.hasRoom()) {
+                UI.showStatus(`🚫 Limite de ${MAX} atingido.`, 'error');
+                return;
+            }
+            DOM.fileInput.click();
+        });
+
+        DOM.pasteArea.addEventListener('dragover', e => {
+            e.preventDefault();
+            DOM.pasteArea.classList.add('border-indigo-500');
+        });
+
+        DOM.pasteArea.addEventListener('dragleave', () => {
+            DOM.pasteArea.classList.remove('border-indigo-500');
+        });
+
+        DOM.pasteArea.addEventListener('drop', e => {
+            e.preventDefault();
+            DOM.pasteArea.classList.remove('border-indigo-500');
+            handle(e.dataTransfer.files);
+        });
+
+        DOM.fileInput.addEventListener('change', e => {
+            if (e.target.files.length) {
+                handle(e.target.files);
+                e.target.value = '';
+            }
+        });
+
+        DOM.cleanJoinBtn.addEventListener('click', () => {
+            const raw = DOM.output.value;
+            if (!raw.trim()) return;
+            const u = [...new Set(Logic.stripLabels(raw).match(/\d+/g) || [])];
+            DOM.output.value = u.map(n => Logic.classify(n)).join('\n');
+            UI.updateCharCounter();
+            SelectionPanel.parse();
+            UI.triggerSummary();
+            const btn = DOM.cleanJoinBtn;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check mr-2"></i>Limpo!';
+            setTimeout(() => btn.innerHTML = orig, 1500);
+        });
+
+        DOM.copyBtn.addEventListener('click', async () => {
+            const ok = await Logic.copyToClipboard(Logic.stripLabels(DOM.output.value));
+            if (ok) {
+                const btn = DOM.copyBtn;
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check mr-2"></i>Copiado!';
+                btn.classList.replace('bg-blue-600', 'bg-green-600');
+                setTimeout(() => {
+                    btn.innerHTML = orig;
+                    btn.classList.replace('bg-green-600', 'bg-blue-600');
+                }, 2000);
+            }
+        });
+
+        DOM.clearBtn.addEventListener('click', () => UI.clearAll());
+        DOM.themeToggle.addEventListener('click', () => UI.toggleTheme());
+
+        DOM.output.addEventListener('input', () => {
+            UI.updateCharCounter();
+            SelectionPanel.parse();
+            UI.triggerSummary();
+        });
+
+        DOM.rotationSlider.addEventListener('input', e => {
+            AppState.rotation.current = parseFloat(e.target.value);
+            Rotator.update();
+        });
+
+        DOM.quickBtns.forEach(b => b.addEventListener('click', e => {
+            const a = parseFloat(e.currentTarget.dataset.angle);
+            a === 0 ? Rotator.reset() : Rotator.adjust(a);
+        }));
+
+        DOM.closeModalBtn.addEventListener('click', () => {
+            const rem = AppState.extraction.queue.length;
+            if (rem > 0) {
+                Session.count = Math.max(0, Session.count - rem);
+                AppState.extraction.queue = [];
+            }
+            Rotator.hide();
+            if (Session.processed > 0) Extractor.finalize();
+            else UI.syncSession();
+        });
+
+        DOM.cancelRotationBtn.addEventListener('click', () => DOM.closeModalBtn.click());
+
+        DOM.skipImageBtn.addEventListener('click', () => {
+            Session.count = Math.max(0, Session.count - 1);
+            Rotator.hide();
+            Rotator.showNext();
+        });
+
+        DOM.confirmRotationBtn.addEventListener('click', async () => {
+            Rotator.hide();
+            await Extractor.processCurrentImage(await Logic.getRotatedBlob());
+        });
+
+        DOM.btnSelAll.addEventListener('click', () => SelectionPanel.selectAll());
+        DOM.btnSelNone.addEventListener('click', () => SelectionPanel.selectNone());
+        DOM.btnCopySel.addEventListener('click', () => SelectionPanel.copySelected());
+
+        DOM.linkButtons.forEach(btn => btn.addEventListener('click', async e => {
+            e.preventDefault();
+            const el = e.currentTarget;
+            const m = DOM.output.value.replace(/\D/g, '').match(new RegExp(el.dataset.pattern));
+            if (m) {
+                window.open(el.href, '_blank');
+                await Logic.copyToClipboard(m[0]);
+                UI.showStatus(`✅ Copiado: ${m[0]}`, 'success');
+            } else {
+                UI.showStatus('⚠️ Padrão não encontrado.', 'error');
+            }
+        }));
+    })();
+
+    UI.init();
+    UI.updateCharCounter();
 });
 </script>
 </body>
