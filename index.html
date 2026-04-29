@@ -313,7 +313,11 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCopySel: $('btnCopySel'),
         btnCopySelText: $('btnCopySelText'),
         linkButtons: document.querySelectorAll('.link-button'),
-        quickBtns: document.querySelectorAll('.quick-btn')
+        quickBtns: document.querySelectorAll('.quick-btn'),
+        pasteChoiceModal: $('pasteChoiceModal'),
+        btnAppendPaste: $('btnAppendPaste'),
+        btnReplacePaste: $('btnReplacePaste'),
+        btnCancelPaste: $('btnCancelPaste')
     };
 
     const SelectionPanel = {
@@ -1155,10 +1159,43 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const PasteChoice = {
+        _pendingFiles: null,
+
+        show(files) {
+            this._pendingFiles = files;
+            DOM.pasteChoiceModal.classList.remove('hidden');
+        },
+
+        hide() {
+            DOM.pasteChoiceModal.classList.add('hidden');
+        },
+
+        confirm(replace) {
+            this.hide();
+            const files = this._pendingFiles;
+            this._pendingFiles = null;
+            if (replace) {
+                UI.clearAll();
+            }
+            Extractor.start(files);
+        },
+
+        cancel() {
+            this.hide();
+            this._pendingFiles = null;
+        }
+    };
+
     (() => {
         const handle = files => {
             const imgs = Array.from(files).filter(f => f.type.startsWith('image/'));
-            if (imgs.length) Extractor.start(imgs);
+            if (!imgs.length) return;
+            if (DOM.output.value.trim()) {
+                PasteChoice.show(imgs);
+            } else {
+                Extractor.start(imgs);
+            }
         };
 
         document.addEventListener('paste', e => {
@@ -1291,9 +1328,45 @@ document.addEventListener('DOMContentLoaded', () => {
         }));
     })();
 
+    DOM.btnAppendPaste.addEventListener('click', () => PasteChoice.confirm(false));
+    DOM.btnReplacePaste.addEventListener('click', () => PasteChoice.confirm(true));
+    DOM.btnCancelPaste.addEventListener('click', () => PasteChoice.cancel());
+
     UI.init();
     UI.updateCharCounter();
 });
 </script>
+
+<div id="pasteChoiceModal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center p-4 z-50 hidden rotation-modal">
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md p-6 relative">
+        <div class="flex flex-col items-center text-center mb-5">
+            <div class="w-14 h-14 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center mb-3">
+                <i class="fas fa-paste text-2xl text-indigo-500"></i>
+            </div>
+            <h3 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Nova imagem detectada</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-xs">Já existe conteúdo extraído. O que deseja fazer com a nova imagem?</p>
+        </div>
+        <div class="flex flex-col gap-3">
+            <button id="btnAppendPaste" class="flex items-center gap-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-5 rounded-xl transition-all hover:scale-[1.02] shadow-md shadow-indigo-500/20">
+                <i class="fas fa-plus-circle text-lg flex-shrink-0"></i>
+                <div class="text-left">
+                    <div class="text-sm font-bold">Acrescentar ao existente</div>
+                    <div class="text-xs font-normal opacity-80">Adiciona o novo código à lista atual</div>
+                </div>
+            </button>
+            <button id="btnReplacePaste" class="flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-5 rounded-xl transition-all hover:scale-[1.02] shadow-md shadow-rose-500/20">
+                <i class="fas fa-sync-alt text-lg flex-shrink-0"></i>
+                <div class="text-left">
+                    <div class="text-sm font-bold">Substituir (apagar o atual)</div>
+                    <div class="text-xs font-normal opacity-80">Remove tudo e extrai apenas o novo</div>
+                </div>
+            </button>
+            <button id="btnCancelPaste" class="flex items-center justify-center gap-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-semibold py-2.5 px-5 rounded-xl transition-all text-sm">
+                <i class="fas fa-times"></i> Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
