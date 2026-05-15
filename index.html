@@ -1200,12 +1200,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.addEventListener('paste', e => {
             if (!DOM.rotationModal.classList.contains('hidden')) return;
+            if (!DOM.pasteChoiceModal.classList.contains('hidden')) return;
             const f = [...(e.clipboardData?.items || [])]
                 .map(i => i.getAsFile())
                 .find(f => f?.type.startsWith('image/'));
             if (f) {
                 e.preventDefault();
-                Extractor.start([f]);
+                handle([f]);
             }
         });
 
